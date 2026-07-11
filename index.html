@@ -36,8 +36,17 @@
     transform:perspective(300px) rotateX(58deg); transform-origin:bottom; opacity:.7;
   }
   .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.34em; text-transform:uppercase; color:var(--cyan); margin:0 0 12px}
-  h1.title{font-family:var(--display); font-weight:600; font-size:clamp(46px,9vw,104px); line-height:.92; letter-spacing:.01em; margin:0; text-transform:uppercase; font-stretch:condensed}
-  h1.title .snap{background:linear-gradient(96deg,var(--magenta),var(--violet) 55%,var(--cyan)); -webkit-background-clip:text; background-clip:text; color:transparent}
+  h1.title{font-family:var(--display); font-weight:700; font-size:clamp(52px,10vw,120px); line-height:.86; letter-spacing:.004em; margin:0; text-transform:uppercase; font-stretch:condensed; font-style:italic; filter:drop-shadow(0 8px 34px rgba(123,92,255,.22))}
+  h1.title .marvel{color:transparent; -webkit-text-stroke:1.6px var(--ink-dim); paint-order:stroke fill; margin-right:.06em}
+  h1.title .snap{
+    background:linear-gradient(96deg,var(--magenta),var(--violet) 52%,var(--cyan));
+    background-size:220% 100%;
+    -webkit-background-clip:text; background-clip:text;
+    color:transparent; -webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 28px rgba(255,45,149,.5));
+    animation:snapShimmer 7s ease-in-out infinite;
+  }
+  @keyframes snapShimmer{0%,100%{background-position:0% 50%} 50%{background-position:100% 50%}}
   .sub{font-family:var(--mono); color:var(--ink-dim); font-size:13px; margin-top:16px; letter-spacing:.04em}
   .sub b{color:var(--ink)}
 
@@ -329,6 +338,7 @@
   @media (prefers-reduced-motion:reduce){
     .foil::before{animation:none}
     .meter .fill, .comp-fill{transition:none; animation:none}
+    h1.title .snap{animation:none}
     html{scroll-behavior:auto}
   }
 </style>
@@ -337,8 +347,8 @@
 <div class="wrap">
   <header class="mast">
     <p class="eyebrow" id="eyebrow">Collection Dossier</p>
-    <h1 class="title">Marvel <span class="snap">Snap</span></h1>
-    <p class="sub">Reads your local <b>CollectionState.json</b> in the browser. Your collection stays on your machine.</p>
+    <h1 class="title"><span class="marvel">Marvel</span> <span class="snap">Snap</span></h1>
+    <p class="sub">Reads your local Marvel Snap files in the browser &mdash; collection, decks, rank and cube stats. Nothing leaves your machine.</p>
 
     <div class="toolbar">
       <button id="btnSync" class="tb primary" title="Read the freshest CollectionState.json">&#8635; Sync</button>
@@ -1311,8 +1321,10 @@ function drawCardCanvas(s){
   const grad = ctx.createLinearGradient(pad, 0, pad + 560, 0);
   grad.addColorStop(0, "#ff2d95"); grad.addColorStop(.55, "#7b5cff"); grad.addColorStop(1, "#22e0ff");
   ctx.fillStyle = grad;
-  const nm = (s.name || "").toUpperCase(); ctx.fillText(nm, pad, 116);
-  if (s.tag != null){ ctx.font = `500 26px ${MONO}`; ctx.fillStyle = "#6a6499"; ctx.fillText(`#${s.tag}`, pad + ctx.measureText(nm).width + 16, 116); }
+  const nm = (s.name || "").toUpperCase();
+  ctx.fillText(nm, pad, 116);
+  const nameW = ctx.measureText(nm).width;   // measure while the 58px display font is still active
+  if (s.tag != null){ ctx.font = `500 24px ${MONO}`; ctx.fillStyle = "#9a92c9"; ctx.fillText(`#${s.tag}`, pad + nameW + 18, 112); }
   if (s.eightCube){ spaced("◆ 8-CUBE WIN", W - pad, 58, `600 13px ${MONO}`, "#ffc23d", 2, "right"); }
   // tier / rank / level subline
   const sub = [];
@@ -1367,7 +1379,7 @@ function drawCardCanvas(s){
   if (s.decks) rec.push(`${fmt(s.decks)} decks`);
   if (rec.length) spaced(rec.join("   ·   "), pad, recY, `500 15px ${MONO}`, "#9a92c9", .5);
   spaced("snap-dossier", pad, H - 26, `11px ${MONO}`, "#6a6499", 2);
-  spaced("collection stays on your machine", W - pad, H - 26, `11px ${MONO}`, "#6a6499", .5, "right");
+  spaced("read locally · never uploaded", W - pad, H - 26, `11px ${MONO}`, "#6a6499", .5, "right");
   return cv;
 }
 function showCardPreview(canvas){
