@@ -114,6 +114,71 @@
   .ctile.violet .n{color:var(--violet); text-shadow:0 0 18px rgba(123,92,255,.3)}
   .w-spent{font-family:var(--mono); font-size:11.5px; letter-spacing:.03em; color:var(--ink-faint); margin-top:13px}
 
+  /* share card preview overlay */
+  .card-overlay{position:fixed; inset:0; z-index:60; display:grid; place-items:center; padding:24px; background:rgba(6,5,18,.82)}
+  .card-overlay[hidden]{display:none}
+  .card-modal{display:flex; flex-direction:column; gap:16px; max-width:min(900px,94vw)}
+  .card-modal img{width:100%; height:auto; border-radius:16px; border:1px solid var(--line); box-shadow:0 24px 90px rgba(0,0,0,.6)}
+  .card-actions{display:flex; align-items:center; gap:12px}
+  a.tb{text-decoration:none}
+
+  /* tabs + panels */
+  .tabs{display:flex; gap:2px; margin:32px 0 0; border-bottom:1px solid var(--line); flex-wrap:wrap}
+  .tabs[hidden]{display:none}
+  .tabs button{appearance:none; background:none; border:0; border-bottom:2px solid transparent; color:var(--ink-dim); font-family:var(--mono); font-size:13px; letter-spacing:.14em; text-transform:uppercase; padding:13px 18px; cursor:pointer; margin-bottom:-1px; transition:color .15s}
+  .tabs button:hover{color:var(--ink)}
+  .tabs button[aria-pressed="true"]{color:var(--cyan); border-bottom-color:var(--cyan)}
+  .tab-wrap[hidden]{display:none}
+  .panel[hidden]{display:none}
+  .panel > section:first-child{margin-top:40px}
+
+  /* tools: missing cards */
+  .tool-box{display:flex; flex-direction:column; gap:12px; max-width:720px}
+  .tool-ta{width:100%; min-height:92px; resize:vertical; background:var(--bg-grid); border:1px solid var(--line); border-radius:12px; color:var(--ink); font-family:var(--mono); font-size:13px; padding:14px; line-height:1.5}
+  .tool-ta:focus{outline:none; border-color:var(--cyan)}
+  .tool-actions{display:flex; align-items:center; gap:12px}
+  .miss-summary{font-family:var(--mono); font-size:13px; color:var(--ink-dim); margin:24px 0 14px}
+  .miss-summary b{color:var(--magenta)} .miss-summary b.ok{color:var(--cyan)}
+  .miss-note{font-family:var(--mono); font-size:12px; color:var(--ink-faint); margin-top:10px}
+
+  /* deck builder */
+  .builder{display:grid; grid-template-columns:1fr 300px; gap:28px; align-items:start}
+  @media (max-width:820px){ .builder{grid-template-columns:1fr} }
+  .builder-cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(82px,1fr)); gap:10px; max-height:600px; overflow-y:auto; padding:2px}
+  .bcard{position:relative; border:1px solid var(--line); border-radius:9px; overflow:hidden; cursor:pointer; background:var(--bg-grid); aspect-ratio:2/3}
+  .bcard img{width:100%; height:100%; object-fit:cover; display:block}
+  .bcard .ph{position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:4px; font-family:var(--mono); font-size:8px; color:var(--ink-dim)}
+  .bcard .cap{position:absolute; left:0; right:0; bottom:0; font-size:8px; padding:3px 4px; background:linear-gradient(transparent,rgba(0,0,0,.85)); color:#fff; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .bcard.unowned{opacity:.45}
+  .bcard.unowned::after{content:"\2717"; position:absolute; top:3px; right:5px; color:var(--magenta); font-size:12px; font-weight:700; text-shadow:0 0 4px #000}
+  .bcard.in-deck{outline:2px solid var(--cyan); outline-offset:-2px; opacity:1}
+  .builder-side{position:sticky; top:16px; display:flex; flex-direction:column; gap:14px}
+  .deck-slots{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+  .slot{aspect-ratio:2/3; border:1px dashed var(--line); border-radius:8px; background:var(--bg-grid); position:relative; overflow:hidden}
+  .slot.filled{border-style:solid; cursor:pointer}
+  .slot img{width:100%; height:100%; object-fit:cover; display:block}
+  .slot.filled.unowned{outline:2px solid var(--magenta); outline-offset:-2px}
+  .slot .ph{position:absolute; inset:0; display:grid; place-items:center; padding:3px; font-family:var(--mono); font-size:7px; color:var(--ink-dim); text-align:center}
+  .builder-side-actions{display:flex; gap:8px}
+  .builder-io{display:flex; gap:8px}
+  .builder-io input{flex:1 1 auto; min-width:0; background:var(--bg-grid); border:1px solid var(--line); border-radius:9px; color:var(--ink); font-family:var(--mono); font-size:12px; padding:9px 11px}
+  .builder-io input:focus{outline:none; border-color:var(--cyan)}
+  .saved-decks{display:flex; flex-direction:column; gap:6px}
+  .saved-deck{display:flex; align-items:center; gap:8px; justify-content:space-between; font-family:var(--mono); font-size:12px; color:var(--ink-dim); border:1px solid var(--line); border-radius:8px; padding:8px 10px}
+  .saved-deck .sd-name{color:var(--ink); cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1 1 auto}
+  .saved-deck .sd-x{appearance:none; background:none; border:0; color:var(--ink-faint); cursor:pointer; font-family:var(--mono); font-size:13px}
+  .saved-deck .sd-x:hover{color:var(--magenta)}
+  .deck-code-btn{appearance:none; background:var(--bg-grid); border:1px solid var(--line); border-radius:7px; color:var(--cyan); font-family:var(--mono); font-size:11px; letter-spacing:.04em; padding:5px 11px; cursor:pointer}
+  .deck-code-btn:hover{border-color:var(--cyan)}
+  .bcost{position:absolute; top:3px; left:3px; z-index:2; min-width:16px; height:16px; padding:0 3px; border-radius:5px; background:rgba(11,10,31,.86); border:1px solid var(--line); color:var(--cyan); font-family:var(--mono); font-size:10px; font-weight:700; line-height:15px; text-align:center}
+  /* mana curve */
+  .curve{display:flex; align-items:flex-end; gap:6px; height:82px; padding:14px 0 0; margin-top:2px; border-top:1px solid var(--line)}
+  .curve[hidden]{display:none}
+  .cv-col{flex:1 1 0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:5px; height:100%}
+  .cv-bar{width:100%; background:linear-gradient(180deg,var(--cyan),var(--violet)); border-radius:4px 4px 0 0; position:relative}
+  .cv-bar span{position:absolute; top:-15px; left:0; right:0; text-align:center; font-family:var(--mono); font-size:10px; color:var(--ink-dim)}
+  .cv-x{font-family:var(--mono); font-size:10px; color:var(--ink-faint)}
+
   /* cube impact */
   .cube-cols{display:grid; grid-template-columns:1fr 1fr; gap:28px}
   .cube-list{display:grid; gap:6px}
@@ -278,7 +343,8 @@
     <div class="toolbar">
       <button id="btnSync" class="tb primary" title="Read the freshest CollectionState.json">&#8635; Sync</button>
       <button id="btnProfile" class="tb ghost" disabled title="Add W-L record + cube stats from ProfileState.json">+ Profile stats</button>
-      <button id="btnCopy" class="tb" disabled title="Copy the collection as JSON to the clipboard">Copy to clipboard</button>
+      <button id="btnCard" class="tb" disabled title="Generate a shareable stats card image">&#9670; Share card</button>
+      <button id="btnCopy" class="tb ghost" disabled title="Copy the collection as JSON to the clipboard">Copy to clipboard</button>
       <button id="btnCsv" class="tb ghost" disabled>CSV</button>
       <button id="btnJson" class="tb ghost" disabled>JSON</button>
       <button id="btnReset" class="tb ghost" disabled title="Forget the loaded collection">Reset</button>
@@ -297,16 +363,22 @@
       <p class="fineprint"><code>%USERPROFILE%</code> fills in your username automatically. The file is read in your browser and saved on this device &mdash; nothing is uploaded. After the first time, Sync is one click.</p>
     </div>
 
+  </header>
+
+  <nav class="tabs" id="tabs" hidden>
+    <button data-tab="profile" aria-pressed="true">Profile</button>
+    <button data-tab="stats" aria-pressed="false">Stats</button>
+    <button data-tab="decks" aria-pressed="false">Decks</button>
+    <button data-tab="tools" aria-pressed="false">Tools</button>
+  </nav>
+
+  <div class="tab-wrap" id="tabWrap" hidden>
+
+  <div class="panel" data-panel="profile">
     <p class="identity" id="identity" hidden></p>
     <div class="rankmeter" id="rankMeter" hidden></div>
-    <div class="readout" id="readout" hidden></div>
-    <p class="career" id="career" hidden></p>
     <p class="wallet" id="wallet" hidden></p>
-    <div class="dist" id="dist" hidden>
-      <div class="dist-bar" id="distBar"></div>
-      <div class="dist-key" id="distKey"></div>
-    </div>
-  </header>
+    <p class="career" id="career" hidden></p>
 
   <section id="cubes" hidden>
     <div class="sec-head"><h2>Cube Impact</h2><p id="cubeMeta"></p></div>
@@ -315,6 +387,15 @@
       <div class="cube-col"><div class="deck-sub">Cube sinks</div><div id="cubeSinks" class="cube-list"></div></div>
     </div>
   </section>
+
+  </div><!-- /panel profile -->
+
+  <div class="panel" data-panel="stats" hidden>
+    <div class="readout" id="readout" hidden></div>
+    <div class="dist" id="dist" hidden>
+      <div class="dist-bar" id="distBar"></div>
+      <div class="dist-key" id="distKey"></div>
+    </div>
 
   <section id="completion" hidden>
     <div class="sec-head"><h2>Series Completion</h2><p id="compMeta"></p></div>
@@ -369,14 +450,72 @@
     <div class="rowcount" id="rowcount"></div>
   </section>
 
+  </div><!-- /panel stats -->
+
+  <div class="panel" data-panel="decks" hidden>
   <section id="decks" hidden>
-    <div class="sec-head"><h2>Decks</h2><p id="deckMeta"></p></div>
+    <div class="sec-head"><h2>Decks</h2><p id="deckMeta"></p><button id="deckCopyAll" class="tb ghost" hidden>Copy all deck codes</button></div>
     <div class="deck-staples-wrap">
       <div class="deck-sub">Most-used cards</div>
       <div class="cloud" id="deckStaples"></div>
     </div>
     <div class="deck-list" id="deckList"></div>
   </section>
+  </div><!-- /panel decks -->
+
+  <div class="panel" data-panel="tools" hidden>
+
+  <section id="missingTool">
+    <div class="sec-head"><h2>Missing Cards</h2><p>Paste a deck code or card list to see what you don't own</p></div>
+    <div class="tool-box">
+      <textarea id="missingIn" class="tool-ta" placeholder="Paste a Marvel Snap deck code, or a list of card names (one per line, or comma-separated)…"></textarea>
+      <div class="tool-actions">
+        <button id="missingRun" class="tb primary">Check</button>
+        <button id="missingClear" class="tb ghost">Clear</button>
+        <span id="missingMeta" class="tb-status"></span>
+      </div>
+    </div>
+    <div id="missingOut"></div>
+  </section>
+
+  <section id="builder">
+    <div class="sec-head"><h2>Deck Builder</h2><p id="builderMeta">0 / 12</p></div>
+    <div class="builder">
+      <div class="builder-pool">
+        <div class="controls">
+          <div class="search"><input id="bSearch" type="search" placeholder="Search cards…" autocomplete="off"></div>
+          <div class="filters" id="bFilters">
+            <button data-bf="all" aria-pressed="true">All</button>
+            <button data-bf="owned" aria-pressed="false">Owned</button>
+            <button data-bf="missing" aria-pressed="false">Missing</button>
+          </div>
+        </div>
+        <div class="builder-cards" id="bPool"></div>
+      </div>
+      <aside class="builder-side">
+        <div class="deck-slots" id="bSlots"></div>
+        <div class="curve" id="bCurve" hidden></div>
+        <div class="builder-side-actions">
+          <button id="bCopy" class="tb primary" disabled>Copy deck code</button>
+          <button id="bClear" class="tb ghost" disabled>Clear</button>
+        </div>
+        <div class="builder-io">
+          <input id="bName" type="text" placeholder="Deck name" maxlength="40">
+          <button id="bSave" class="tb" disabled>Save deck</button>
+        </div>
+        <div class="builder-io">
+          <input id="bImport" type="text" placeholder="Paste a deck code to load…">
+          <button id="bLoad" class="tb ghost">Load</button>
+        </div>
+        <div class="deck-sub" id="bSavedHead" hidden>Saved decks</div>
+        <div class="saved-decks" id="bSaved"></div>
+      </aside>
+    </div>
+  </section>
+
+  </div><!-- /panel tools -->
+
+  </div><!-- /tab-wrap -->
 
   <footer>
     <details class="privacy">
@@ -413,6 +552,7 @@ let liveProfileHandle = null;
 let universe = [];        // slim card list from cards.json
 let liveHandle = null;    // FileSystemFileHandle for one-click re-sync
 let artIndex = new Map(); // carddefid -> art url
+let costIndex = new Map(); // carddefid -> mana cost
 let view = "table";       // "table" | "gallery"
 let _by = {}, _owned = new Set();  // cached for the completion missing-expanders
 
@@ -686,6 +826,7 @@ function renderDecks(){
   if (!currentData || !currentDecks.length){ sec.hidden = true; return; }
   sec.hidden = false;
   $("deckMeta").textContent = `${currentDecks.length} decks`;
+  $("deckCopyAll").hidden = false;
 
   // staples: how many decks each card appears in
   const counts = {};
@@ -695,7 +836,7 @@ function renderDecks(){
     .map(([cid, n]) => `<span class="chip">${esc(prettify(cid))} <b>\u00d7${n}</b></span>`).join("");
 
   // deck rows
-  $("deckList").innerHTML = currentDecks.map(d => {
+  $("deckList").innerHTML = currentDecks.map((d, i) => {
     const strip = d.cards.map(c => {
       const nm = prettify(c.cid), art = artIndex.get(c.cid);
       const thumb = art
@@ -708,7 +849,8 @@ function renderDecks(){
       + (d.splits ? ` \u00b7 ${d.splits} split` : "")
       + (date ? ` \u00b7 ${date}` : "");
     return `<div class="deck"><div class="deck-head"><span class="deck-name">${esc(d.name)}</span>`
-      + `<span class="deck-meta">${meta}</span></div><div class="deck-strip">${strip}</div></div>`;
+      + `<span class="deck-meta">${meta} <button class="deck-code-btn" data-deck="${i}">Copy code</button></span>`
+      + `</div><div class="deck-strip">${strip}</div></div>`;
   }).join("");
 }
 
@@ -854,8 +996,10 @@ let sortKey = "name", sortDir = 1, filter = "all", query = "";
 
 function setLoaded(has){
   $("empty").hidden = has;
+  $("tabs").hidden = !has;
+  $("tabWrap").hidden = !has;
   ["readout","dist","history","infinity","dormant","grid"].forEach(id => $(id).hidden = !has);
-  ["btnCopy","btnCsv","btnJson","btnReset","btnProfile"].forEach(id => $(id).disabled = !has);
+  ["btnCard","btnCopy","btnCsv","btnJson","btnReset","btnProfile"].forEach(id => $(id).disabled = !has);
 }
 
 function renderAll(){
@@ -909,6 +1053,9 @@ function renderAll(){
   renderCompletion();
   renderDecks();
   renderProfile();
+  renderBuilderDeck();
+  const _tp = document.querySelector('.panel[data-panel="tools"]');
+  if (_tp && !_tp.hidden) renderBuilderPool();
 }
 
 function renderGrid(){
@@ -1104,6 +1251,158 @@ function toCsv(){
   ].join(","));
   return [head, ...rows].join("\r\n");
 }
+/* ---------- shareable stats card (canvas -> clipboard image) ---------- */
+function shareStats(){
+  const D = currentData || [];
+  const sum = (k) => D.reduce((s, r) => s + (r[k] || 0), 0);
+  const p = currentProfile || {}, w = p.wallet || {};
+  let owned = 0, total = 0;                       // released collectible characters
+  if (universe && universe.length){
+    const by = collectibleSeries(universe), have = new Set(D.map(r => r.card_def_id)), uni = new Set();
+    for (const s in by) for (const c of by[s]) uni.add(c.carddefid);
+    total = uni.size; uni.forEach(id => { if (have.has(id)) owned++; });
+  }
+  const decided = (p.wins != null) ? p.wins + p.losses : null;
+  const netCubes = p.cardStats ? Object.values(p.cardStats).reduce((a, b) => a + b, 0) : null;
+  return {
+    name: p.name || "Marvel Snap Player", tag: p.tag,
+    level: currentLevel, rank: p.rank || null, eightCube: !!p.eightCube,
+    cards: D.length, variants: sum("variant_count"), splits: sum("splits"),
+    compPct: total ? Math.round(owned / total * 100) : null, owned, total,
+    wins: p.wins, losses: p.losses, ties: p.ties, wr: decided ? Math.round(p.wins / decided * 100) : null,
+    snaps: p.snaps, retreats: p.concedes, netCubes,
+    gold: w.gold ? w.gold.total : null, tokens: w.tokens ? w.tokens.total : null,
+    decks: (currentDecks || []).length,
+  };
+}
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function drawCardCanvas(s){
+  const W = 1000, H = 600, SC = 2, pad = 44, dash = "–";
+  const DISPLAY = '"Bahnschrift","DIN Alternate","Oswald",system-ui,sans-serif';
+  const MONO = '"Cascadia Mono","Consolas",ui-monospace,monospace';
+  const cv = document.createElement("canvas");
+  cv.width = W * SC; cv.height = H * SC;
+  const ctx = cv.getContext("2d"); ctx.scale(SC, SC);
+  const spaced = (txt, x, y, font, color, ls, align) => {
+    ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align || "left";
+    try{ ctx.letterSpacing = (ls || 0) + "px"; }catch(_){}
+    ctx.fillText(txt, x, y);
+    try{ ctx.letterSpacing = "0px"; }catch(_){}
+  };
+  // background + glows + grid floor
+  ctx.fillStyle = "#0b0a1f"; ctx.fillRect(0, 0, W, H);
+  const gA = ctx.createRadialGradient(W * .82, -40, 0, W * .82, -40, 520);
+  gA.addColorStop(0, "rgba(255,45,149,.20)"); gA.addColorStop(1, "rgba(255,45,149,0)");
+  ctx.fillStyle = gA; ctx.fillRect(0, 0, W, H);
+  const gB = ctx.createRadialGradient(60, 40, 0, 60, 40, 460);
+  gB.addColorStop(0, "rgba(34,224,255,.14)"); gB.addColorStop(1, "rgba(34,224,255,0)");
+  ctx.fillStyle = gB; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = "rgba(123,92,255,.10)"; ctx.lineWidth = 1;
+  for (let gx = 0; gx <= W; gx += 40){ ctx.beginPath(); ctx.moveTo(gx, H - 90); ctx.lineTo(gx, H); ctx.stroke(); }
+  roundRect(ctx, 6, 6, W - 12, H - 12, 20); ctx.strokeStyle = "rgba(123,92,255,.35)"; ctx.lineWidth = 2; ctx.stroke();
+
+  spaced("◆ MARVEL SNAP DOSSIER", pad, 58, `600 13px ${MONO}`, "#22e0ff", 4);
+  // name (gradient) + tag
+  ctx.font = `600 58px ${DISPLAY}`; ctx.textAlign = "left";
+  const grad = ctx.createLinearGradient(pad, 0, pad + 560, 0);
+  grad.addColorStop(0, "#ff2d95"); grad.addColorStop(.55, "#7b5cff"); grad.addColorStop(1, "#22e0ff");
+  ctx.fillStyle = grad;
+  const nm = (s.name || "").toUpperCase(); ctx.fillText(nm, pad, 116);
+  if (s.tag != null){ ctx.font = `500 26px ${MONO}`; ctx.fillStyle = "#6a6499"; ctx.fillText(`#${s.tag}`, pad + ctx.measureText(nm).width + 16, 116); }
+  if (s.eightCube){ spaced("◆ 8-CUBE WIN", W - pad, 58, `600 13px ${MONO}`, "#ffc23d", 2, "right"); }
+  // tier / rank / level subline
+  const sub = [];
+  if (s.rank){
+    const tier = rankTier(s.rank.rank);
+    sub.push(`${tier ? tier.toUpperCase() + " " : ""}RANK ${fmt(s.rank.rank)}`);
+    if (s.rank.high != null) sub.push(`PEAK ${(rankTier(s.rank.high) || "").toUpperCase()} ${fmt(s.rank.high)}`);
+  }
+  if (s.level != null) sub.push(`COLLECTION LEVEL ${fmt(s.level)}`);
+  if (sub.length) spaced(sub.join("   ·   "), pad, 150, `500 14px ${MONO}`, "#9a92c9", 1);
+  // rank meter
+  let tilesY = 200;
+  if (s.rank){
+    const mx = pad, mw = W - pad * 2, my = 176, mh = 12, MAXR = 100;
+    const posX = (v) => mx + Math.max(0, Math.min(MAXR, v)) / MAXR * mw;
+    roundRect(ctx, mx, my, mw, mh, 6); ctx.fillStyle = "#1b1740"; ctx.fill();
+    const fg = ctx.createLinearGradient(mx, 0, mx + mw, 0);
+    fg.addColorStop(0, "#ff2d95"); fg.addColorStop(.6, "#7b5cff"); fg.addColorStop(1, "#22e0ff");
+    roundRect(ctx, mx, my, Math.max(posX(s.rank.rank) - mx, 8), mh, 6); ctx.fillStyle = fg; ctx.fill();
+    if (s.rank.high != null && s.rank.high > s.rank.rank){ ctx.fillStyle = "#ffc23d"; ctx.fillRect(posX(s.rank.high) - 1, my - 4, 2, mh + 8); }
+    ctx.beginPath(); ctx.arc(posX(s.rank.rank), my + mh / 2, 8, 0, Math.PI * 2);
+    ctx.fillStyle = "#fff"; ctx.fill(); ctx.strokeStyle = "#7b5cff"; ctx.lineWidth = 3; ctx.stroke();
+    tilesY = 224;
+  }
+  // stat tiles (4 columns x 2 rows)
+  const cols = 4, gap = 16, tw = (W - pad * 2 - gap * (cols - 1)) / cols, th = 92;
+  const tiles = [
+    { v: fmt(s.cards), l: "Cards", c: "#ece8ff" },
+    { v: fmt(s.variants), l: "Variants", c: "#ece8ff" },
+    { v: fmt(s.splits), l: "Infinity Splits", c: "#ffc23d" },
+    { v: s.compPct != null ? s.compPct + "%" : "—", l: "Set Completion", c: "#22e0ff" },
+    { v: s.wr != null ? s.wr + "%" : "—", l: "Win Rate", c: "#7b5cff" },
+    { v: s.gold != null ? fmt(s.gold) : "—", l: "Gold", c: "#ffc23d" },
+    { v: s.tokens != null ? fmt(s.tokens) : "—", l: "Tokens", c: "#22e0ff" },
+    { v: s.netCubes != null ? (s.netCubes >= 0 ? "+" : "") + fmt(s.netCubes) : "—", l: "Net Cubes",
+      c: s.netCubes == null ? "#ece8ff" : (s.netCubes >= 0 ? "#22e0ff" : "#ff2d95") },
+  ];
+  tiles.forEach((t, i) => {
+    const cx = pad + (i % cols) * (tw + gap), cy = tilesY + Math.floor(i / cols) * (th + gap);
+    roundRect(ctx, cx, cy, tw, th, 12); ctx.fillStyle = "#151234"; ctx.fill();
+    ctx.strokeStyle = "rgba(123,92,255,.20)"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.save(); ctx.shadowColor = t.c; ctx.shadowBlur = 16;
+    ctx.font = `600 34px ${DISPLAY}`; ctx.fillStyle = t.c; ctx.textAlign = "left";
+    ctx.fillText(t.v, cx + 16, cy + 46); ctx.restore();
+    spaced(t.l.toUpperCase(), cx + 16, cy + 74, `11px ${MONO}`, "#9a92c9", 1.5);
+  });
+  // record line + footer
+  const recY = tilesY + 2 * th + gap + 40, rec = [];
+  if (s.wins != null) rec.push(`${fmt(s.wins)}${dash}${fmt(s.losses)}${dash}${fmt(s.ties || 0)}`);
+  if (s.snaps != null) rec.push(`${fmt(s.snaps)} snaps`);
+  if (s.retreats != null) rec.push(`${fmt(s.retreats)} retreats`);
+  if (s.decks) rec.push(`${fmt(s.decks)} decks`);
+  if (rec.length) spaced(rec.join("   ·   "), pad, recY, `500 15px ${MONO}`, "#9a92c9", .5);
+  spaced("snap-dossier", pad, H - 26, `11px ${MONO}`, "#6a6499", 2);
+  spaced("collection stays on your machine", W - pad, H - 26, `11px ${MONO}`, "#6a6499", .5, "right");
+  return cv;
+}
+function showCardPreview(canvas){
+  let ov = $("cardOverlay");
+  if (!ov){
+    ov = document.createElement("div"); ov.id = "cardOverlay"; ov.className = "card-overlay";
+    ov.innerHTML = `<div class="card-modal"><img id="cardImg" alt="Marvel Snap stats card">`
+      + `<div class="card-actions"><a id="cardDl" class="tb primary" download="snap-dossier-card.png">Download</a>`
+      + `<button id="cardClose" class="tb ghost">Close</button><span id="cardMsg" class="tb-status"></span></div></div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener("click", (e) => { if (e.target === ov) ov.hidden = true; });
+    $("cardClose").addEventListener("click", () => { $("cardOverlay").hidden = true; });
+  }
+  const url = canvas.toDataURL("image/png");
+  $("cardImg").src = url; $("cardDl").href = url; ov.hidden = false;
+}
+$("btnCard").addEventListener("click", () => {
+  if (!currentData) return;
+  setStatus("Rendering card…");
+  const canvas = drawCardCanvas(shareStats());
+  showCardPreview(canvas);
+  canvas.toBlob(async (blob) => {
+    const msg = $("cardMsg");
+    if (blob && navigator.clipboard && window.ClipboardItem){
+      try{
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        setStatus("Stats card copied to clipboard", "ok");
+        if (msg){ msg.textContent = "✓ copied to clipboard"; msg.className = "tb-status ok"; }
+        return;
+      }catch(e){}
+    }
+    setStatus("Card ready — use Download (clipboard image blocked)", "warn");
+    if (msg){ msg.textContent = "clipboard blocked — use Download"; msg.className = "tb-status warn"; }
+  }, "image/png");
+});
 $("btnCopy").addEventListener("click", async () => {
   if (!currentData) return;
   const text = JSON.stringify(currentData);
@@ -1118,6 +1417,229 @@ $("btnCopy").addEventListener("click", async () => {
 });
 $("btnCsv").addEventListener("click", () => { if (currentData){ download("marvel_snap_collection.csv", toCsv(), "text/csv"); setStatus("Downloaded CSV", "ok"); } });
 $("btnJson").addEventListener("click", () => { if (currentData){ download("marvel_snap_collection.json", JSON.stringify(currentData, null, 2), "application/json"); setStatus("Downloaded JSON", "ok"); } });
+
+/* ---------- deck-code codec (Marvel Snap long format: base64 of {Cards:[{CardDefId}]}) ---------- */
+function encodeDeck(ids){
+  return btoa(JSON.stringify({ Cards: ids.map(id => ({ CardDefId: id })) }));
+}
+function decodeDeck(code){
+  try{
+    const j = JSON.parse(atob(String(code).trim()));
+    const cards = j && j.Cards;
+    if (!Array.isArray(cards)) return null;
+    const ids = cards.map(c => c && c.CardDefId).filter(Boolean);
+    return ids.length ? ids : null;
+  }catch(e){ return null; }
+}
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); return true; }
+  catch(e){
+    try{
+      const ta = document.createElement("textarea"); ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand("copy"); ta.remove(); return ok;
+    }catch(_){ return false; }
+  }
+}
+function cleanName(n){ return String(n).replace(/<[^>]*>/g, "").trim(); }
+function nameKey(s){ return String(s).toLowerCase().replace(/[^a-z0-9]/g, ""); }
+
+/* ---------- tabs ---------- */
+function switchTab(name){
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === name)));
+  document.querySelectorAll('.panel').forEach(p => { p.hidden = (p.dataset.panel !== name); });
+  if (name === 'tools') renderBuilderPool();
+}
+document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+/* ---------- deck-code export (Decks tab) ---------- */
+$("deckList").addEventListener("click", async (e) => {
+  const btn = e.target.closest(".deck-code-btn"); if (!btn) return;
+  const d = currentDecks[+btn.dataset.deck]; if (!d) return;
+  const ok = await copyText(encodeDeck(d.cards.map(c => c.cid)));
+  const prev = btn.textContent; btn.textContent = ok ? "Copied ✓" : "Failed";
+  setTimeout(() => { btn.textContent = prev; }, 1400);
+});
+$("deckCopyAll").addEventListener("click", async () => {
+  if (!currentDecks.length) return;
+  const lines = currentDecks.map(d => `${d.name}\t${encodeDeck(d.cards.map(c => c.cid))}`);
+  const ok = await copyText(lines.join("\n"));
+  setStatus(ok ? `Copied ${currentDecks.length} deck codes` : "Copy blocked", ok ? "ok" : "warn");
+});
+
+/* ---------- missing-cards tool ---------- */
+function cardNameIndex(){
+  const byName = new Map(), ids = new Set();
+  for (const c of universe){
+    if (!c.carddefid) continue;
+    ids.add(c.carddefid);
+    byName.set(nameKey(c.carddefid), c.carddefid);
+    if (c.name) byName.set(nameKey(cleanName(c.name)), c.carddefid);
+  }
+  return { byName, ids };
+}
+function runMissing(){
+  const text = ($("missingIn").value || "").trim(), out = $("missingOut");
+  $("missingMeta").textContent = "";
+  if (!text){ out.innerHTML = ""; return; }
+  if (!universe.length){ out.innerHTML = `<p class="miss-note">Card database not loaded yet.</p>`; return; }
+  if (!currentData){ out.innerHTML = `<p class="miss-note">Sync your collection first (Sync button up top).</p>`; return; }
+
+  const { byName, ids: validIds } = cardNameIndex();
+  const owned = new Set(currentData.map(r => r.card_def_id));
+  const decoded = decodeDeck(text);
+  let resolved = [], unknown = [], mode;
+  if (decoded){ mode = "code"; resolved = decoded.map(id => ({ id })); }
+  else {
+    mode = "list";
+    for (const tok of text.split(/[\n,]+/).map(s => s.trim()).filter(Boolean)){
+      const id = validIds.has(tok) ? tok : byName.get(nameKey(tok));
+      if (id) resolved.push({ id }); else unknown.push(tok);
+    }
+  }
+  const seen = new Set();
+  resolved = resolved.filter(r => !seen.has(r.id) && seen.add(r.id));
+  const missing = resolved.filter(r => !owned.has(r.id));
+  const have = resolved.length - missing.length;
+
+  $("missingMeta").textContent = mode === "code" ? "read as deck code" : `${resolved.length} matched`;
+  let html = `<div class="miss-summary">`;
+  if (!resolved.length) html += `Nothing recognized.`;
+  else if (!missing.length) html += `You own <b class="ok">all ${resolved.length}</b> — ready to build.`;
+  else html += `Missing <b>${missing.length}</b> of ${resolved.length} · own ${have}`;
+  html += `</div>`;
+  if (missing.length)
+    html += `<div class="gallery">` + missing.map(r => cardTile({ name: prettify(r.id), art: artIndex.get(r.id), locked: true })).join("") + `</div>`;
+  if (unknown.length) html += `<p class="miss-note">Unrecognized: ${unknown.slice(0, 20).map(esc).join(", ")}${unknown.length > 20 ? "…" : ""}</p>`;
+  out.innerHTML = html;
+}
+$("missingRun").addEventListener("click", runMissing);
+$("missingClear").addEventListener("click", () => { $("missingIn").value = ""; $("missingOut").innerHTML = ""; $("missingMeta").textContent = ""; });
+
+/* ---------- deck builder ---------- */
+const LS_DECKS = "snapDossier.savedDecks";
+let builderDeck = [], bFilter = "all", bQuery = "";
+function ownedSet(){ return new Set((currentData || []).map(r => r.card_def_id)); }
+function builderPoolCards(){
+  const own = ownedSet();
+  return universe
+    .filter(c => c.carddefid && c.status === "released" && (!c.type || c.type === "Character"))
+    .filter(c => { const s = (c.source_slug || "").toLowerCase(); return s && s !== "none"; })
+    .filter(c => bQuery ? (nameKey(c.name || "") + nameKey(c.carddefid)).includes(nameKey(bQuery)) : true)
+    .filter(c => bFilter === "owned" ? own.has(c.carddefid) : bFilter === "missing" ? !own.has(c.carddefid) : true)
+    .sort((a, b) => cleanName(a.name || a.carddefid).localeCompare(cleanName(b.name || b.carddefid)));
+}
+function renderBuilderPool(){
+  const pool = $("bPool"); if (!pool) return;
+  if (!universe.length){ pool.innerHTML = `<p class="miss-note">Card database not loaded.</p>`; return; }
+  const own = ownedSet(), inDeck = new Set(builderDeck), cards = builderPoolCards();
+  pool.innerHTML = cards.map(c => {
+    const owns = own.has(c.carddefid), nm = c.name ? cleanName(c.name) : prettify(c.carddefid);
+    const cost = typeof c.cost === "number" ? c.cost : null;
+    const img = c.art
+      ? `<img loading="lazy" src="${esc(c.art)}" alt="${esc(nm)}" onerror="imgFallback(this)"><div class="ph" style="display:none">${esc(nm)}</div>`
+      : `<div class="ph">${esc(nm)}</div>`;
+    return `<div class="bcard${owns ? "" : " unowned"}${inDeck.has(c.carddefid) ? " in-deck" : ""}" data-cid="${esc(c.carddefid)}" title="${esc(nm)}${owns ? "" : " (not owned)"}">${cost != null ? `<div class="bcost">${cost}</div>` : ""}${img}<div class="cap">${esc(nm)}</div></div>`;
+  }).join("") || `<p class="miss-note">No cards match.</p>`;
+}
+function renderBuilderDeck(){
+  const slots = $("bSlots"); if (!slots) return;
+  const own = ownedSet();
+  let html = "";
+  for (let i = 0; i < 12; i++){
+    const id = builderDeck[i];
+    if (id){
+      const nm = prettify(id), art = artIndex.get(id), owns = own.has(id), cost = costIndex.get(id);
+      const inner = art
+        ? `<img loading="lazy" src="${esc(art)}" alt="${esc(nm)}" onerror="imgFallback(this)"><div class="ph" style="display:none">${esc(nm)}</div>`
+        : `<div class="ph">${esc(nm)}</div>`;
+      html += `<div class="slot filled${owns ? "" : " unowned"}" data-cid="${esc(id)}" title="${esc(nm)} — click to remove">${typeof cost === "number" ? `<div class="bcost">${cost}</div>` : ""}${inner}</div>`;
+    } else html += `<div class="slot"></div>`;
+  }
+  slots.innerHTML = html;
+  const miss = builderDeck.filter(id => !own.has(id)).length;
+  $("builderMeta").textContent = `${builderDeck.length} / 12${miss ? ` · ${miss} not owned` : ""}`;
+  const any = builderDeck.length > 0;
+  $("bCopy").disabled = !any; $("bClear").disabled = !any; $("bSave").disabled = !any;
+  renderBuilderCurve();
+}
+// Mana curve: histogram of the deck's cards by cost (fixed 1-6 axis, extended
+// if the deck runs cheaper/pricier; unknown-cost cards fall into a "?" column).
+function renderBuilderCurve(){
+  const el = $("bCurve"); if (!el) return;
+  if (!builderDeck.length){ el.hidden = true; return; }
+  const counts = {}, present = []; let unknown = 0;
+  for (const id of builderDeck){
+    const c = costIndex.get(id);
+    if (typeof c !== "number"){ unknown++; continue; }
+    counts[c] = (counts[c] || 0) + 1; present.push(c);
+  }
+  const lo = Math.min(1, ...(present.length ? present : [1]));
+  const hi = Math.max(6, ...(present.length ? present : [6]));
+  const cols = []; for (let c = lo; c <= hi; c++) cols.push(c);
+  const maxN = Math.max(1, ...cols.map(c => counts[c] || 0), unknown);
+  const bar = (n, label) =>
+    `<div class="cv-col"><div class="cv-bar" style="height:${n ? Math.max(4, Math.round(n / maxN * 60)) : 0}px">`
+    + `${n ? `<span>${n}</span>` : ""}</div><div class="cv-x">${label}</div></div>`;
+  el.hidden = false;
+  el.innerHTML = cols.map(c => bar(counts[c] || 0, c)).join("") + (unknown ? bar(unknown, "?") : "");
+}
+function builderToggle(id){
+  if (builderDeck.includes(id)) builderDeck = builderDeck.filter(x => x !== id);
+  else if (builderDeck.length < 12) builderDeck.push(id);
+  else { setStatus("Deck is full (12 cards)", "warn"); return; }
+  renderBuilderDeck(); renderBuilderPool();
+}
+$("bPool").addEventListener("click", (e) => { const el = e.target.closest(".bcard"); if (el) builderToggle(el.dataset.cid); });
+$("bSlots").addEventListener("click", (e) => { const el = e.target.closest(".slot.filled"); if (el) builderToggle(el.dataset.cid); });
+$("bSearch").addEventListener("input", (e) => { bQuery = e.target.value; renderBuilderPool(); });
+$("bFilters").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-bf]"); if (!btn) return;
+  bFilter = btn.dataset.bf;
+  $("bFilters").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+  renderBuilderPool();
+});
+$("bCopy").addEventListener("click", async () => {
+  if (!builderDeck.length) return;
+  setStatus(await copyText(encodeDeck(builderDeck)) ? "Deck code copied" : "Copy blocked", "ok");
+});
+$("bClear").addEventListener("click", () => { builderDeck = []; renderBuilderDeck(); renderBuilderPool(); });
+$("bLoad").addEventListener("click", () => {
+  const ids = decodeDeck($("bImport").value || "");
+  if (!ids){ setStatus("Not a valid deck code", "warn"); return; }
+  builderDeck = ids.slice(0, 12); $("bImport").value = "";
+  renderBuilderDeck(); renderBuilderPool();
+  setStatus(`Loaded ${builderDeck.length} cards`, "ok");
+});
+
+/* saved decks (localStorage) */
+function loadSavedDecks(){ try{ return JSON.parse(localStorage.getItem(LS_DECKS)) || []; }catch(e){ return []; } }
+function storeSavedDecks(a){ try{ localStorage.setItem(LS_DECKS, JSON.stringify(a)); }catch(e){} }
+function renderSavedDecks(){
+  const saved = loadSavedDecks();
+  $("bSavedHead").hidden = !saved.length;
+  $("bSaved").innerHTML = saved.map((d, i) =>
+    `<div class="saved-deck"><span class="sd-name" data-load="${i}">${esc(d.name)} <span style="color:var(--ink-faint)">· ${d.count}</span></span>`
+    + `<button class="deck-code-btn" data-copy="${i}">Copy</button><button class="sd-x" data-del="${i}" title="Delete">✕</button></div>`).join("");
+}
+$("bSave").addEventListener("click", () => {
+  if (!builderDeck.length) return;
+  const saved = loadSavedDecks();
+  const name = ($("bName").value || "").trim() || `Deck ${saved.length + 1}`;
+  saved.unshift({ name, code: encodeDeck(builderDeck), count: builderDeck.length });
+  storeSavedDecks(saved); $("bName").value = ""; renderSavedDecks();
+  setStatus(`Saved "${name}"`, "ok");
+});
+$("bSaved").addEventListener("click", async (e) => {
+  const load = e.target.closest("[data-load]"), copy = e.target.closest("[data-copy]"), del = e.target.closest("[data-del]");
+  const saved = loadSavedDecks();
+  if (load){ const d = saved[+load.dataset.load], ids = d && decodeDeck(d.code); if (ids){ builderDeck = ids.slice(0, 12); renderBuilderDeck(); renderBuilderPool(); setStatus(`Loaded "${d.name}"`, "ok"); } }
+  else if (copy){ const d = saved[+copy.dataset.copy]; if (d) setStatus(await copyText(d.code) ? "Deck code copied" : "Copy blocked", "ok"); }
+  else if (del){ saved.splice(+del.dataset.del, 1); storeSavedDecks(saved); renderSavedDecks(); }
+});
+renderBuilderDeck();
+renderSavedDecks();
 
 /* ---------- boot ---------- */
 (async function init(){
@@ -1137,8 +1659,11 @@ $("btnJson").addEventListener("click", () => { if (currentData){ download("marve
       const data = await res.json();
       if (Array.isArray(data)){
         universe = data;
-        artIndex = new Map();
-        for (const c of universe){ if (c.carddefid && c.art) artIndex.set(c.carddefid, c.art); }
+        artIndex = new Map(); costIndex = new Map();
+        for (const c of universe){
+          if (c.carddefid && c.art) artIndex.set(c.carddefid, c.art);
+          if (c.carddefid && typeof c.cost === "number") costIndex.set(c.carddefid, c.cost);
+        }
       }
     }
   }catch(e){ /* offline or placeholder; completion + gallery degrade to text */ }

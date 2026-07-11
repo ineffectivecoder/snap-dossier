@@ -2,8 +2,8 @@
 """Fetch the MarvelSnapZone card list and write a slim cards.json for the site.
 
 Run by the "Refresh card data" GitHub Action. Keeps only the fields the site
-needs (carddefid, name, source, source_slug, status, type) so the committed
-cards.json stays small. Refuses to overwrite with a suspiciously short list.
+needs (carddefid, name, source, source_slug, status, type, art, cost, power) so
+the committed cards.json stays small. Refuses to overwrite with a short list.
 
 Usage:
   python scripts/refresh_cards.py                # fetch live
@@ -15,7 +15,18 @@ import urllib.request
 
 URL = "https://marvelsnapzone.com/getinfo/?searchtype=cards&searchcardstype=true"
 FIELDS = ("carddefid", "name", "source", "source_slug", "status", "type", "art")
+NUM_FIELDS = ("cost", "power")  # integers; kept as-is (0 is valid, not "missing")
 MIN_CARDS = 100  # guard against committing a broken/empty pull
+
+
+def as_int(v):
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, int):
+        return v
+    if isinstance(v, str) and v.strip().lstrip("-").isdigit():
+        return int(v)
+    return None
 
 
 def fetch(url):
@@ -31,7 +42,10 @@ def slim(payload):
         cid = c.get("carddefid")
         if not cid:
             continue
-        out.append({k: (c.get(k) or "") for k in FIELDS})
+        rec = {k: (c.get(k) or "") for k in FIELDS}
+        for k in NUM_FIELDS:
+            rec[k] = as_int(c.get(k))
+        out.append(rec)
     return out
 
 
