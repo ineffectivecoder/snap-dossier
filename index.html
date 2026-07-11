@@ -37,7 +37,14 @@
   }
   .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.34em; text-transform:uppercase; color:var(--cyan); margin:0 0 12px}
   h1.title{font-family:var(--display); font-weight:700; font-size:clamp(48px,9vw,108px); line-height:.9; letter-spacing:.006em; margin:0; text-transform:uppercase; font-stretch:condensed}
-  h1.title .marvel{color:var(--ink)}
+  h1.title .marvel{
+    background:
+      repeating-linear-gradient(94deg, rgba(255,255,255,.06) 0 1px, transparent 1px 4px),
+      linear-gradient(176deg, #ffffff 0%, #d7dae4 20%, #9a9fb0 46%, #676c7c 51%, #b9bdca 58%, #eef0f5 82%, #ffffff 100%);
+    -webkit-background-clip:text; background-clip:text;
+    color:transparent; -webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.35));
+  }
   h1.title .snap{
     background:linear-gradient(96deg,var(--magenta),var(--violet) 52%,var(--cyan));
     background-size:200% 100%;
@@ -220,6 +227,16 @@
   .tl-newest .deck-sub{margin-bottom:12px}
   /* saved-deck completion */
   .sd-need{color:var(--magenta)} .sd-done{color:var(--cyan)}
+  /* deck-builder stats line */
+  .builder-stats{display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:2px; font-family:var(--mono); font-size:11.5px; color:var(--ink-dim)}
+  .builder-stats[hidden]{display:none}
+  .builder-stats b{color:var(--ink)}
+  .builder-stats .bs-mech{flex-basis:100%; color:var(--ink-faint); margin-top:2px}
+  /* "closest to finish" completion callout */
+  .comp-focus{margin:0 0 22px; padding:16px; border:1px solid var(--line); border-radius:12px; background:var(--bg-grid)}
+  .cf-head{font-family:var(--mono); font-size:12.5px; letter-spacing:.04em; color:var(--ink-dim); margin-bottom:14px}
+  .cf-head b{color:var(--cyan)}
+  .cf-more{font-family:var(--mono); font-size:11px; color:var(--ink-faint); margin-top:10px}
 
   /* cube impact */
   .cube-cols{display:grid; grid-template-columns:1fr 1fr; gap:28px}
@@ -477,7 +494,7 @@
   <section id="grid" hidden>
     <div class="sec-head"><h2>Full Collection</h2><p>Click a header to sort</p></div>
     <div class="controls">
-      <div class="search"><input id="q" type="search" placeholder="Filter by card name..." autocomplete="off"></div>
+      <div class="search"><input id="q" type="search" placeholder="Filter by name or ability (destroy, move, on reveal…)" autocomplete="off"></div>
       <div class="filters" id="filters">
         <button data-f="all" aria-pressed="true">All</button>
         <button data-f="split">Splits</button>
@@ -540,7 +557,7 @@
     <div class="builder">
       <div class="builder-pool">
         <div class="controls">
-          <div class="search"><input id="bSearch" type="search" placeholder="Search cards…" autocomplete="off"></div>
+          <div class="search"><input id="bSearch" type="search" placeholder="Search name or ability…" autocomplete="off"></div>
           <div class="filters" id="bFilters">
             <button data-bf="all" aria-pressed="true">All</button>
             <button data-bf="owned" aria-pressed="false">Owned</button>
@@ -553,6 +570,7 @@
       <aside class="builder-side">
         <div class="deck-slots" id="bSlots"></div>
         <div class="curve" id="bCurve" hidden></div>
+        <div class="builder-stats" id="bStats" hidden></div>
         <div class="builder-side-actions">
           <button id="bCopy" class="tb primary" disabled>Copy deck code</button>
           <button id="bClear" class="tb ghost" disabled>Clear</button>
@@ -840,6 +858,12 @@ document.addEventListener("click", (e) => {
   const hit = e.target.closest('.tile[data-cid], .cube-row[data-cid], .dcard[data-cid], tbody tr[data-cid]');
   if (hit) showCardDetail(hit.dataset.cid);
 });
+// searchable text for a card: name + ability text, so filters match mechanics
+// like "destroy", "move", "discard", "on reveal", "ongoing".
+function cardSearchText(cid, name){
+  const c = cardById.get(cid);
+  return (name + (c && c.ability ? " " + c.ability : "")).toLowerCase();
+}
 
 /* ---------- completion ---------- */
 function collectibleSeries(cards){
@@ -876,12 +900,13 @@ function renderCompletion(){
 
   const pctFmt = (v) => (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1));
   const uni = new Set();
-  let html = "";
+  let html = "", closest = null;
   for (const s of seriesList){
     const recs = by[s];
     let have = 0;
     for (const c of recs){ uni.add(c.carddefid); if (owned.has(c.carddefid)) have++; }
     const total = recs.length, miss = total - have, done = have === total;
+    if (miss > 0 && (!closest || miss < closest.miss)) closest = { series: s, miss, recs };
     const pctv = total ? have / total * 100 : 0;
     html += `<div class="comp-row">`
       + `<span class="comp-label">${esc(s)}</span>`
@@ -898,7 +923,16 @@ function renderCompletion(){
     + `<span class="comp-track"><span class="comp-fill${th === tot ? " done" : ""}" style="width:${tpct.toFixed(1)}%"></span></span>`
     + `<span class="comp-val"><b class="${th === tot ? "pdone" : ""}">${pctFmt(tpct)}%</b> <span class="miss">${th}/${tot}</span></span></div>`;
 
-  $("comp").innerHTML = html;
+  let callout = "";
+  if (closest){
+    const mc = closest.recs.filter(c => !owned.has(c.carddefid)).sort((a, b) => a.name.localeCompare(b.name));
+    const shown = mc.slice(0, 24);
+    callout = `<div class="comp-focus"><div class="cf-head">Closest to finish: <b>${esc(closest.series)}</b> \u2014 ${closest.miss} card${closest.miss === 1 ? "" : "s"} to go</div>`
+      + `<div class="gallery">` + shown.map(c => cardTile({ name: c.name, art: c.art, locked: true, cid: c.carddefid })).join("") + `</div>`
+      + (mc.length > shown.length ? `<div class="cf-more">+${mc.length - shown.length} more below</div>` : "")
+      + `</div>`;
+  }
+  $("comp").innerHTML = callout + html;
   $("compMeta").textContent = `${th}/${tot} released cards \u00b7 ${tot-th} missing`;
 }
 
@@ -1216,7 +1250,7 @@ function renderGrid(){
     recent: r => r.acquired && (Date.now() - r.acquired) < RECENT_MS,
   };
   let rows = currentData.filter(preds[filter]);
-  if (query) rows = rows.filter(r => r.name.toLowerCase().includes(query));
+  if (query) rows = rows.filter(r => cardSearchText(r.card_def_id, r.name).includes(query));
   rows.sort((a,b) => {
     let av = a[sortKey], bv = b[sortKey];
     if (typeof av === "string") return av.localeCompare(bv) * sortDir;
@@ -1717,7 +1751,7 @@ function builderPoolCards(){
   return universe
     .filter(isPoolCard)
     .filter(c => bSeries === "all" ? true : cardSeries(c) === bSeries)
-    .filter(c => bQuery ? (nameKey(c.name || "") + nameKey(c.carddefid)).includes(nameKey(bQuery)) : true)
+    .filter(c => bQuery ? (nameKey(c.name || "") + nameKey(c.carddefid) + nameKey(c.ability || "")).includes(nameKey(bQuery)) : true)
     .filter(c => bFilter === "owned" ? own.has(c.carddefid) : bFilter === "missing" ? !own.has(c.carddefid) : true)
     .sort((a, b) => cleanName(a.name || a.carddefid).localeCompare(cleanName(b.name || b.carddefid)));
 }
@@ -1768,6 +1802,26 @@ function renderBuilderDeck(){
   const any = builderDeck.length > 0;
   $("bCopy").disabled = !any; $("bClear").disabled = !any; $("bSave").disabled = !any;
   renderBuilderCurve();
+  renderDeckStats();
+}
+// Deck stats: avg cost, total power, and mechanic tags derived from ability text.
+function renderDeckStats(){
+  const el = $("bStats"); if (!el) return;
+  if (!builderDeck.length){ el.hidden = true; return; }
+  const recs = builderDeck.map(id => cardById.get(id)).filter(Boolean);
+  const costs = recs.map(c => c.cost).filter(v => typeof v === "number");
+  const avg = costs.length ? costs.reduce((s, v) => s + v, 0) / costs.length : null;
+  const pow = recs.reduce((s, c) => s + (typeof c.power === "number" ? c.power : 0), 0);
+  const KW = ["On Reveal", "Ongoing", "Move", "Destroy", "Discard"], mc = {};
+  for (const c of recs){
+    const ab = (c.ability || "").toLowerCase();
+    for (const k of KW) if (ab.includes(k.toLowerCase())) mc[k] = (mc[k] || 0) + 1;
+  }
+  const mechs = KW.filter(k => mc[k]).map(k => `${mc[k]} ${k}`);
+  el.hidden = false;
+  el.innerHTML = (avg != null ? `<span>avg cost <b>${avg.toFixed(1)}</b></span>` : "")
+    + `<span>total power <b>${fmt(pow)}</b></span>`
+    + (mechs.length ? `<span class="bs-mech">${mechs.map(esc).join(" · ")}</span>` : "");
 }
 // Mana curve: histogram of the deck's cards by cost (fixed 1-6 axis, extended
 // if the deck runs cheaper/pricier; unknown-cost cards fall into a "?" column).
