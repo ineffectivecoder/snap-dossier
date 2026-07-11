@@ -39,11 +39,18 @@
   h1.title{font-family:var(--display); font-weight:700; font-size:clamp(48px,9vw,108px); line-height:.9; letter-spacing:.006em; margin:0; text-transform:uppercase; font-stretch:condensed}
   h1.title .marvel{
     background:
+      linear-gradient(100deg, transparent 38%, rgba(255,255,255,.95) 48%, rgba(255,255,255,.55) 52%, transparent 62%),
       repeating-linear-gradient(94deg, rgba(255,255,255,.06) 0 1px, transparent 1px 4px),
       linear-gradient(176deg, #d5d8e0 0%, #9aa0af 24%, #6f7587 47%, #474c59 51%, #7d8393 59%, #a6aab7 82%, #bcc0ca 100%);
+    background-size:230% 100%, auto, auto; background-repeat:no-repeat;
     -webkit-background-clip:text; background-clip:text;
     color:transparent; -webkit-text-fill-color:transparent;
     filter:drop-shadow(0 1px 1px rgba(0,0,0,.35));
+    animation:marvelShine 5s ease-in-out infinite;
+  }
+  @keyframes marvelShine{
+    0%{background-position:230% 0, 0 0, 0 0}
+    45%,100%{background-position:-130% 0, 0 0, 0 0}
   }
   h1.title .snap{
     background:linear-gradient(96deg,var(--magenta),var(--violet) 52%,var(--cyan));
@@ -391,7 +398,7 @@
   @media (prefers-reduced-motion:reduce){
     .foil::before{animation:none}
     .meter .fill, .comp-fill{transition:none; animation:none}
-    h1.title .snap{animation:none}
+    h1.title .snap, h1.title .marvel{animation:none}
     html{scroll-behavior:auto}
   }
 </style>
