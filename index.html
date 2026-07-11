@@ -514,9 +514,10 @@
           <button id="bSave" class="tb" disabled>Save deck</button>
         </div>
         <div class="builder-io">
-          <input id="bImport" type="text" placeholder="Paste a deck code to load…">
+          <input id="bImport" type="text" placeholder="Paste a deck code or card list…">
           <button id="bLoad" class="tb ghost">Load</button>
         </div>
+        <div id="bMsg" class="tb-status"></div>
         <div class="deck-sub" id="bSavedHead" hidden>Saved decks</div>
         <div class="saved-decks" id="bSaved"></div>
       </aside>
@@ -1431,17 +1432,60 @@ $("btnCsv").addEventListener("click", () => { if (currentData){ download("marvel
 $("btnJson").addEventListener("click", () => { if (currentData){ download("marvel_snap_collection.json", JSON.stringify(currentData, null, 2), "application/json"); setStatus("Downloaded JSON", "ok"); } });
 
 /* ---------- deck-code codec (Marvel Snap long format: base64 of {Cards:[{CardDefId}]}) ---------- */
+// Export the short/official format (base64 of comma-separated short tokens) --
+// what the game copies today. Decode still accepts long codes for old shares.
 function encodeDeck(ids){
-  return btoa(JSON.stringify({ Cards: ids.map(id => ({ CardDefId: id })) }));
+  return btoa(ids.map(shortToken).join(","));
 }
+// Official "short" code: each card is devowel(CardDefId)+base36(length), where
+// devowel keeps the first char and drops a/e/i/o/u/y. Verified collision-free.
+function devowelId(cid){ return cid[0] + cid.slice(1).replace(/[aeiouy]/gi, ""); }
+function shortToken(cid){ return devowelId(cid) + cid.length.toString(36).toUpperCase(); }
+let _shortMap = null;
+function shortMap(){
+  if (!_shortMap && universe.length){
+    _shortMap = new Map();
+    for (const c of universe){ if (c.carddefid) _shortMap.set(shortToken(c.carddefid), c.carddefid); }
+  }
+  return _shortMap || new Map();
+}
+function dedupe(a){ const s = new Set(); return a.filter(x => !s.has(x) && s.add(x)); }
+// Decode a deck code: long format {"Cards":[{"CardDefId"}]} or the short format.
 function decodeDeck(code){
+  const raw = String(code || "").trim();
+  if (!raw) return null;
   try{
-    const j = JSON.parse(atob(String(code).trim()));
-    const cards = j && j.Cards;
-    if (!Array.isArray(cards)) return null;
-    const ids = cards.map(c => c && c.CardDefId).filter(Boolean);
-    return ids.length ? ids : null;
-  }catch(e){ return null; }
+    const j = JSON.parse(atob(raw));
+    if (j && Array.isArray(j.Cards)){
+      const ids = j.Cards.map(c => c && c.CardDefId).filter(Boolean);
+      if (ids.length) return ids;
+    }
+  }catch(e){}
+  try{
+    const dec = atob(raw);
+    if (/^[A-Za-z0-9]+(?:,[A-Za-z0-9]+)*$/.test(dec)){
+      const map = shortMap();
+      const ids = dec.split(",").map(t => map.get(t)).filter(Boolean);
+      if (ids.length) return ids;
+    }
+  }catch(e){}
+  return null;
+}
+// Resolve any input -> {ids, unknown}: a deck code (long/short), or a comma/
+// newline list of card names, CardDefIds, or short tokens.
+function resolveCards(text){
+  const raw = (text || "").trim();
+  if (!raw) return { ids: [], unknown: [] };
+  const code = decodeDeck(raw);
+  if (code) return { ids: dedupe(code), unknown: [] };
+  const { byName, ids: valid } = cardNameIndex();
+  const sm = shortMap();
+  const ids = [], unknown = [];
+  for (const tok of raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean)){
+    const id = valid.has(tok) ? tok : (byName.get(nameKey(tok)) || sm.get(tok));
+    if (id) ids.push(id); else unknown.push(tok);
+  }
+  return { ids: dedupe(ids), unknown };
 }
 async function copyText(text){
   try{ await navigator.clipboard.writeText(text); return true; }
@@ -1498,24 +1542,14 @@ function runMissing(){
   if (!universe.length){ out.innerHTML = `<p class="miss-note">Card database not loaded yet.</p>`; return; }
   if (!currentData){ out.innerHTML = `<p class="miss-note">Sync your collection first (Sync button up top).</p>`; return; }
 
-  const { byName, ids: validIds } = cardNameIndex();
+  const isCode = !!decodeDeck(text);
+  const { ids, unknown } = resolveCards(text);
   const owned = new Set(currentData.map(r => r.card_def_id));
-  const decoded = decodeDeck(text);
-  let resolved = [], unknown = [], mode;
-  if (decoded){ mode = "code"; resolved = decoded.map(id => ({ id })); }
-  else {
-    mode = "list";
-    for (const tok of text.split(/[\n,]+/).map(s => s.trim()).filter(Boolean)){
-      const id = validIds.has(tok) ? tok : byName.get(nameKey(tok));
-      if (id) resolved.push({ id }); else unknown.push(tok);
-    }
-  }
-  const seen = new Set();
-  resolved = resolved.filter(r => !seen.has(r.id) && seen.add(r.id));
+  const resolved = ids.map(id => ({ id }));
   const missing = resolved.filter(r => !owned.has(r.id));
   const have = resolved.length - missing.length;
 
-  $("missingMeta").textContent = mode === "code" ? "read as deck code" : `${resolved.length} matched`;
+  $("missingMeta").textContent = isCode ? "read as deck code" : `${resolved.length} matched`;
   let html = `<div class="miss-summary">`;
   if (!resolved.length) html += `Nothing recognized.`;
   else if (!missing.length) html += `You own <b class="ok">all ${resolved.length}</b> — ready to build.`;
@@ -1645,12 +1679,18 @@ $("bCopy").addEventListener("click", async () => {
   setStatus(await copyText(encodeDeck(builderDeck)) ? "Deck code copied" : "Copy blocked", "ok");
 });
 $("bClear").addEventListener("click", () => { builderDeck = []; renderBuilderDeck(); renderBuilderPool(); });
+function builderMsg(text, warn){
+  const el = $("bMsg");
+  if (el){ el.textContent = text; el.className = "tb-status " + (warn ? "warn" : "ok"); }
+  setStatus(text, warn ? "warn" : "ok");
+}
 $("bLoad").addEventListener("click", () => {
-  const ids = decodeDeck($("bImport").value || "");
-  if (!ids){ setStatus("Not a valid deck code", "warn"); return; }
+  const { ids, unknown } = resolveCards($("bImport").value || "");
+  if (!ids.length){ builderMsg("Couldn't read that — paste a deck code or card list", true); return; }
   builderDeck = ids.slice(0, 12); $("bImport").value = "";
   renderBuilderDeck(); renderBuilderPool();
-  setStatus(`Loaded ${builderDeck.length} cards`, "ok");
+  builderMsg(`Loaded ${builderDeck.length} card${builderDeck.length === 1 ? "" : "s"}`
+    + (unknown.length ? ` · ${unknown.length} unrecognized` : ""));
 });
 
 /* saved decks (localStorage) */
