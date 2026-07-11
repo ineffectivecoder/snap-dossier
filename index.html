@@ -36,15 +36,15 @@
     transform:perspective(300px) rotateX(58deg); transform-origin:bottom; opacity:.7;
   }
   .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.34em; text-transform:uppercase; color:var(--cyan); margin:0 0 12px}
-  h1.title{font-family:var(--display); font-weight:700; font-size:clamp(52px,10vw,120px); line-height:.86; letter-spacing:.004em; margin:0; text-transform:uppercase; font-stretch:condensed; font-style:italic; filter:drop-shadow(0 8px 34px rgba(123,92,255,.22))}
-  h1.title .marvel{color:transparent; -webkit-text-stroke:1.6px var(--ink-dim); paint-order:stroke fill; margin-right:.06em}
+  h1.title{font-family:var(--display); font-weight:700; font-size:clamp(48px,9vw,108px); line-height:.9; letter-spacing:.006em; margin:0; text-transform:uppercase; font-stretch:condensed}
+  h1.title .marvel{color:var(--ink)}
   h1.title .snap{
     background:linear-gradient(96deg,var(--magenta),var(--violet) 52%,var(--cyan));
-    background-size:220% 100%;
+    background-size:200% 100%;
     -webkit-background-clip:text; background-clip:text;
     color:transparent; -webkit-text-fill-color:transparent;
-    filter:drop-shadow(0 0 28px rgba(255,45,149,.5));
-    animation:snapShimmer 7s ease-in-out infinite;
+    filter:drop-shadow(0 0 22px rgba(255,45,149,.38));
+    animation:snapShimmer 8s ease-in-out infinite;
   }
   @keyframes snapShimmer{0%,100%{background-position:0% 50%} 50%{background-position:100% 50%}}
   .sub{font-family:var(--mono); color:var(--ink-dim); font-size:13px; margin-top:16px; letter-spacing:.04em}
@@ -179,7 +179,6 @@
   .saved-deck .sd-x:hover{color:var(--magenta)}
   .deck-code-btn{appearance:none; background:var(--bg-grid); border:1px solid var(--line); border-radius:7px; color:var(--cyan); font-family:var(--mono); font-size:11px; letter-spacing:.04em; padding:5px 11px; cursor:pointer}
   .deck-code-btn:hover{border-color:var(--cyan)}
-  .bcost{position:absolute; top:3px; left:3px; z-index:2; min-width:16px; height:16px; padding:0 3px; border-radius:5px; background:rgba(11,10,31,.86); border:1px solid var(--line); color:var(--cyan); font-family:var(--mono); font-size:10px; font-weight:700; line-height:15px; text-align:center}
   /* mana curve */
   .curve{display:flex; align-items:flex-end; gap:6px; height:82px; padding:14px 0 0; margin-top:2px; border-top:1px solid var(--line)}
   .curve[hidden]{display:none}
@@ -354,7 +353,7 @@
       <button id="btnSync" class="tb primary" title="Read the freshest CollectionState.json">&#8635; Sync</button>
       <button id="btnProfile" class="tb ghost" disabled title="Add W-L record + cube stats from ProfileState.json">+ Profile stats</button>
       <button id="btnCard" class="tb" disabled title="Generate a shareable stats card image">&#9670; Share card</button>
-      <button id="btnCopy" class="tb ghost" disabled title="Copy the collection as JSON to the clipboard">Copy to clipboard</button>
+      <button id="btnCopy" class="tb ghost" disabled title="Copy the collection as JSON to the clipboard">Export</button>
       <button id="btnCsv" class="tb ghost" disabled>CSV</button>
       <button id="btnJson" class="tb ghost" disabled>JSON</button>
       <button id="btnReset" class="tb ghost" disabled title="Forget the loaded collection">Reset</button>
@@ -499,6 +498,7 @@
             <button data-bf="owned" aria-pressed="false">Owned</button>
             <button data-bf="missing" aria-pressed="false">Missing</button>
           </div>
+          <div class="filters" id="bSeries"></div>
         </div>
         <div class="builder-cards" id="bPool"></div>
       </div>
@@ -1531,28 +1531,50 @@ $("missingClear").addEventListener("click", () => { $("missingIn").value = ""; $
 
 /* ---------- deck builder ---------- */
 const LS_DECKS = "snapDossier.savedDecks";
-let builderDeck = [], bFilter = "all", bQuery = "";
+let builderDeck = [], bFilter = "all", bQuery = "", bSeries = "all";
 function ownedSet(){ return new Set((currentData || []).map(r => r.card_def_id)); }
+function isPoolCard(c){
+  if (!c.carddefid || c.status !== "released") return false;
+  if (c.type && c.type !== "Character") return false;
+  const s = (c.source_slug || "").toLowerCase();
+  return !!s && s !== "none";
+}
+// canonical series bucket; the "Collection Level 1-14" unlock set is just Series 1
+function cardSeries(c){ return c.source === "Collection Level 1-14" ? "Series 1" : (c.source || ""); }
 function builderPoolCards(){
   const own = ownedSet();
   return universe
-    .filter(c => c.carddefid && c.status === "released" && (!c.type || c.type === "Character"))
-    .filter(c => { const s = (c.source_slug || "").toLowerCase(); return s && s !== "none"; })
+    .filter(isPoolCard)
+    .filter(c => bSeries === "all" ? true : cardSeries(c) === bSeries)
     .filter(c => bQuery ? (nameKey(c.name || "") + nameKey(c.carddefid)).includes(nameKey(bQuery)) : true)
     .filter(c => bFilter === "owned" ? own.has(c.carddefid) : bFilter === "missing" ? !own.has(c.carddefid) : true)
     .sort((a, b) => cleanName(a.name || a.carddefid).localeCompare(cleanName(b.name || b.carddefid)));
 }
+// one chip per series present in the pool, ordered like the completion list
+function ensureSeriesChips(){
+  const el = $("bSeries"); if (!el || el.dataset.built || !universe.length) return;
+  const set = new Set();
+  for (const c of universe){ if (isPoolCard(c)){ const s = cardSeries(c); if (s) set.add(s); } }
+  const opts = [...set].sort((a, b) => {
+    const ia = SERIES_ORDER.indexOf(a), ib = SERIES_ORDER.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+  });
+  const short = (s) => s.replace(/^Series /, "S").replace("Starter Card", "Starter").replace("Recruit Season", "Recruit");
+  el.innerHTML = `<button data-bs="all" aria-pressed="true">All series</button>`
+    + opts.map(s => `<button data-bs="${esc(s)}" aria-pressed="false">${esc(short(s))}</button>`).join("");
+  el.dataset.built = "1";
+}
 function renderBuilderPool(){
   const pool = $("bPool"); if (!pool) return;
   if (!universe.length){ pool.innerHTML = `<p class="miss-note">Card database not loaded.</p>`; return; }
+  ensureSeriesChips();
   const own = ownedSet(), inDeck = new Set(builderDeck), cards = builderPoolCards();
   pool.innerHTML = cards.map(c => {
     const owns = own.has(c.carddefid), nm = c.name ? cleanName(c.name) : prettify(c.carddefid);
-    const cost = typeof c.cost === "number" ? c.cost : null;
     const img = c.art
       ? `<img loading="lazy" src="${esc(c.art)}" alt="${esc(nm)}" onerror="imgFallback(this)"><div class="ph" style="display:none">${esc(nm)}</div>`
       : `<div class="ph">${esc(nm)}</div>`;
-    return `<div class="bcard${owns ? "" : " unowned"}${inDeck.has(c.carddefid) ? " in-deck" : ""}" data-cid="${esc(c.carddefid)}" title="${esc(nm)}${owns ? "" : " (not owned)"}">${cost != null ? `<div class="bcost">${cost}</div>` : ""}${img}<div class="cap">${esc(nm)}</div></div>`;
+    return `<div class="bcard${owns ? "" : " unowned"}${inDeck.has(c.carddefid) ? " in-deck" : ""}" data-cid="${esc(c.carddefid)}" title="${esc(nm)}${owns ? "" : " (not owned)"}">${img}<div class="cap">${esc(nm)}</div></div>`;
   }).join("") || `<p class="miss-note">No cards match.</p>`;
 }
 function renderBuilderDeck(){
@@ -1562,11 +1584,11 @@ function renderBuilderDeck(){
   for (let i = 0; i < 12; i++){
     const id = builderDeck[i];
     if (id){
-      const nm = prettify(id), art = artIndex.get(id), owns = own.has(id), cost = costIndex.get(id);
+      const nm = prettify(id), art = artIndex.get(id), owns = own.has(id);
       const inner = art
         ? `<img loading="lazy" src="${esc(art)}" alt="${esc(nm)}" onerror="imgFallback(this)"><div class="ph" style="display:none">${esc(nm)}</div>`
         : `<div class="ph">${esc(nm)}</div>`;
-      html += `<div class="slot filled${owns ? "" : " unowned"}" data-cid="${esc(id)}" title="${esc(nm)} — click to remove">${typeof cost === "number" ? `<div class="bcost">${cost}</div>` : ""}${inner}</div>`;
+      html += `<div class="slot filled${owns ? "" : " unowned"}" data-cid="${esc(id)}" title="${esc(nm)} — click to remove">${inner}</div>`;
     } else html += `<div class="slot"></div>`;
   }
   slots.innerHTML = html;
@@ -1610,6 +1632,12 @@ $("bFilters").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-bf]"); if (!btn) return;
   bFilter = btn.dataset.bf;
   $("bFilters").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+  renderBuilderPool();
+});
+$("bSeries").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-bs]"); if (!btn) return;
+  bSeries = btn.dataset.bs;
+  $("bSeries").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
   renderBuilderPool();
 });
 $("bCopy").addEventListener("click", async () => {
