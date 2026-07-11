@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marvel Snap - Collection Dossier</title>
+<style>
+  :root{
+    --bg:#0b0a1f; --bg-elev:#151234; --bg-grid:#1b1740;
+    --ink:#ece8ff; --ink-dim:#9a92c9; --ink-faint:#6a6499;
+    --magenta:#ff2d95; --cyan:#22e0ff; --violet:#7b5cff; --gold:#ffc23d;
+    --line:rgba(123,92,255,.20); --line-soft:rgba(123,92,255,.10);
+    --display:"Bahnschrift","DIN Alternate","Oswald Medium",system-ui,sans-serif;
+    --mono:"Cascadia Mono","Cascadia Code","Consolas",ui-monospace,monospace;
+    --body:"Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--body); font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(1200px 500px at 80% -10%, rgba(255,45,149,.10), transparent 60%),
+      radial-gradient(900px 500px at 0% 0%, rgba(34,224,255,.08), transparent 55%);
+    background-attachment:fixed;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px 96px}
+
+  header.mast{padding:56px 0 28px; border-bottom:1px solid var(--line); position:relative; overflow:hidden}
+  header.mast::after{
+    content:""; position:absolute; left:0; right:0; bottom:0; height:120px; pointer-events:none;
+    background:
+      repeating-linear-gradient(90deg, var(--line-soft) 0 1px, transparent 1px 40px),
+      repeating-linear-gradient(0deg, var(--line-soft) 0 1px, transparent 1px 40px);
+    -webkit-mask-image:linear-gradient(transparent, #000); mask-image:linear-gradient(transparent, #000);
+    transform:perspective(300px) rotateX(58deg); transform-origin:bottom; opacity:.7;
+  }
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.34em; text-transform:uppercase; color:var(--cyan); margin:0 0 12px}
+  h1.title{font-family:var(--display); font-weight:600; font-size:clamp(46px,9vw,104px); line-height:.92; letter-spacing:.01em; margin:0; text-transform:uppercase; font-stretch:condensed}
+  h1.title .snap{background:linear-gradient(96deg,var(--magenta),var(--violet) 55%,var(--cyan)); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .sub{font-family:var(--mono); color:var(--ink-dim); font-size:13px; margin-top:16px; letter-spacing:.04em}
+  .sub b{color:var(--ink)}
+
+  .toolbar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:24px; position:relative; z-index:2}
+  .tb{font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; background:var(--bg-elev); color:var(--ink); border:1px solid var(--line); padding:10px 15px; border-radius:9px; cursor:pointer; transition:.15s}
+  .tb:hover{border-color:var(--violet)}
+  .tb:focus-visible{outline:2px solid var(--cyan); outline-offset:2px}
+  .tb.primary{border-color:var(--cyan); color:var(--cyan)}
+  .tb.primary:hover{background:rgba(34,224,255,.10); box-shadow:0 0 18px rgba(34,224,255,.15)}
+  .tb.ghost{color:var(--ink-dim)}
+  .tb[disabled]{opacity:.4; cursor:not-allowed}
+  .tb-status{font-family:var(--mono); font-size:12px; color:var(--ink-faint); letter-spacing:.03em; margin-left:2px}
+  .tb-status.ok{color:var(--cyan)} .tb-status.warn{color:var(--gold)}
+
+  /* empty state */
+  .empty{margin:40px 0 8px; padding:34px; border:1px dashed var(--line); border-radius:14px; background:var(--bg-elev); text-align:center}
+  .empty h3{font-family:var(--display); font-stretch:condensed; text-transform:uppercase; letter-spacing:.05em; font-size:24px; margin:0 0 8px}
+  .empty p{color:var(--ink-dim); font-family:var(--mono); font-size:13px; margin:0 auto; max-width:60ch}
+  .empty .path{color:var(--cyan); word-break:break-all}
+  .pathbox{display:flex; gap:10px; align-items:stretch; flex-wrap:wrap; justify-content:center; margin:18px auto; max-width:60ch}
+  .pathbox code{flex:1 1 auto; min-width:0; text-align:left; font-family:var(--mono); font-size:12px; color:var(--cyan); background:var(--bg-grid); border:1px solid var(--line); border-radius:9px; padding:11px 13px; overflow-x:auto; white-space:nowrap}
+  .pathbox button{flex:0 0 auto; white-space:nowrap}
+  .empty .fineprint{color:var(--ink-faint); font-size:12px}
+  .empty .fineprint code{color:var(--ink-dim)}
+
+  .readout{display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 28px; margin:34px 0 14px}
+  .stat{display:flex; align-items:baseline; gap:12px}
+  .stat .n{font-family:var(--display); font-weight:600; font-size:clamp(38px,6vw,60px); line-height:1; font-stretch:condensed}
+  .stat .l{font-family:var(--mono); font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-dim)}
+  .stat.gold .n{color:var(--gold); text-shadow:0 0 22px rgba(255,194,61,.35)}
+  .stat .sep{color:var(--ink-faint); font-size:34px; font-weight:200; line-height:1}
+
+  .dist{margin:22px 0 4px}
+  .dist-bar{display:flex; height:14px; border-radius:7px; overflow:hidden; border:1px solid var(--line)}
+  .dist-bar span{display:block; height:100%}
+  .seg-split{background:linear-gradient(90deg,#ffcf5c,var(--gold))}
+  .seg-active{background:linear-gradient(90deg,var(--magenta),var(--violet) 70%,var(--cyan))}
+  .seg-dormant{background:var(--bg-grid)}
+  .dist-key{display:flex; flex-wrap:wrap; gap:20px; margin-top:10px; font-family:var(--mono); font-size:12px; color:var(--ink-dim)}
+  .dist-key i{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:7px; vertical-align:middle}
+  .dist-key b{color:var(--ink)}
+
+  section{margin-top:56px}
+  section[hidden]{display:none}
+  .sec-head{display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:20px}
+  .sec-head h2{font-family:var(--display); font-weight:600; font-stretch:condensed; text-transform:uppercase; font-size:26px; letter-spacing:.05em; margin:0}
+  .sec-head p{font-family:var(--mono); font-size:12px; color:var(--ink-dim); margin:0; letter-spacing:.03em}
+
+  /* completion */
+  .comp{display:grid; gap:11px}
+  .comp-row{display:grid; grid-template-columns:150px 1fr 132px; align-items:center; gap:14px}
+  .comp-label{font-size:14px; color:var(--ink); white-space:nowrap}
+  .comp-track{height:12px; border-radius:6px; background:var(--bg-elev); overflow:hidden; border:1px solid var(--line-soft)}
+  .comp-fill{display:block; height:100%; width:0; border-radius:6px; background:linear-gradient(90deg,var(--violet),var(--cyan)); animation:compGrow .9s cubic-bezier(.2,.7,.2,1)}
+  .comp-fill.done{background:linear-gradient(90deg,#ffcf5c,var(--gold))}
+  @keyframes compGrow{from{width:0}}
+  .comp-val{font-family:var(--mono); font-size:13px; color:var(--ink-dim); text-align:right; white-space:nowrap}
+  .comp-val b{color:var(--ink)}
+  .comp-val b.pdone{color:var(--gold)}
+  .comp-val .miss{color:var(--ink-faint)}
+  .comp-total .comp-label{color:#fff; font-family:var(--display); font-stretch:condensed; text-transform:uppercase; letter-spacing:.05em}
+  .comp-total .comp-track{border-color:var(--line)}
+  .comp-note{font-family:var(--mono); font-size:12.5px; color:var(--ink-dim); padding:16px; border:1px dashed var(--line); border-radius:12px; background:var(--bg-elev)}
+  .comp-note code{color:var(--cyan)}
+
+  .meters{display:grid; gap:9px}
+  .meter{display:grid; grid-template-columns:190px 1fr 62px; align-items:center; gap:14px}
+  .meter .name{font-size:14px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .meter .track{height:9px; border-radius:5px; background:var(--bg-elev); overflow:hidden}
+  .meter .fill{display:block; height:100%; width:0; border-radius:5px; background:linear-gradient(90deg,var(--violet),var(--cyan)); animation:compGrow 1s cubic-bezier(.2,.7,.2,1)}
+  .meter .val{font-family:var(--mono); font-size:13px; color:var(--ink-dim); text-align:right}
+
+  .foil-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px}
+  .foil{position:relative; padding:14px 16px; border-radius:12px; overflow:hidden; background:linear-gradient(135deg, rgba(255,194,61,.14), rgba(255,45,149,.06)); border:1px solid rgba(255,194,61,.42)}
+  .foil::before{content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.35) 48%,transparent 66%); background-size:280% 100%; background-position:120% 0; mix-blend-mode:screen; animation:sheen 4.2s ease-in-out infinite}
+  .foil .fname{font-family:var(--display); font-stretch:condensed; font-size:19px; font-weight:600; color:#fff; position:relative}
+  .foil .fmeta{font-family:var(--mono); font-size:11px; color:var(--gold); letter-spacing:.06em; margin-top:4px; position:relative}
+  .foil .pips{position:absolute; top:12px; right:14px; display:flex; gap:3px}
+  .foil .pips i{width:6px; height:6px; border-radius:50%; background:var(--gold); box-shadow:0 0 8px rgba(255,194,61,.7)}
+  @keyframes sheen{0%,100%{background-position:120% 0}50%{background-position:-40% 0}}
+
+  .cloud{display:flex; flex-wrap:wrap; gap:8px}
+  .chip{font-family:var(--mono); font-size:12.5px; color:var(--ink-dim); padding:6px 11px; border-radius:20px; border:1px dashed var(--line); background:var(--bg-elev)}
+
+  .controls{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:16px}
+  .search{flex:1 1 240px; min-width:200px}
+  .search input{width:100%; background:var(--bg-elev); border:1px solid var(--line); color:var(--ink); font-family:var(--mono); font-size:13px; padding:10px 14px; border-radius:9px; outline:none}
+  .search input:focus{border-color:var(--cyan); box-shadow:0 0 0 3px rgba(34,224,255,.15)}
+  .search input::placeholder{color:var(--ink-faint)}
+  .filters{display:flex; gap:8px; flex-wrap:wrap}
+  .filters button{font-family:var(--mono); font-size:12px; letter-spacing:.05em; text-transform:uppercase; background:var(--bg-elev); color:var(--ink-dim); border:1px solid var(--line); padding:9px 14px; border-radius:9px; cursor:pointer; transition:.15s}
+  .filters button:hover{color:var(--ink); border-color:var(--violet)}
+  .filters button:focus-visible{outline:2px solid var(--cyan); outline-offset:2px}
+  .filters button[aria-pressed="true"]{background:var(--violet); color:#fff; border-color:var(--violet)}
+
+  table{width:100%; border-collapse:collapse; font-size:14px}
+  thead th{font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); text-align:right; padding:10px 12px; border-bottom:1px solid var(--line); cursor:pointer; user-select:none; white-space:nowrap}
+  thead th:first-child{text-align:left}
+  thead th.up::after{content:" \25B2"; color:var(--cyan)}
+  thead th.down::after{content:" \25BC"; color:var(--cyan)}
+  tbody td{padding:9px 12px; text-align:right; border-bottom:1px solid var(--line-soft); font-family:var(--mono)}
+  tbody td:first-child{text-align:left; font-family:var(--body); color:var(--ink)}
+  tbody tr:hover{background:rgba(123,92,255,.07)}
+  tbody tr.split td:first-child::before{content:"\25C6 "; color:var(--gold); font-size:11px}
+  tbody tr.split td:first-child{color:#fff}
+  .v-pill{display:inline-block; min-width:20px; padding:1px 7px; border-radius:10px; background:rgba(34,224,255,.14); color:var(--cyan); font-size:12px}
+  .split-pill{display:inline-block; min-width:20px; padding:1px 7px; border-radius:10px; background:rgba(255,194,61,.16); color:var(--gold); font-size:12px}
+  .zero{color:var(--ink-faint)}
+  tbody td.date{color:var(--ink-dim)}
+  .rowcount{font-family:var(--mono); font-size:12px; color:var(--ink-faint); margin-top:12px; text-align:right}
+
+  /* view toggle */
+  .viewtoggle{display:flex; gap:0; border:1px solid var(--line); border-radius:9px; overflow:hidden}
+  .viewtoggle button{font-family:var(--mono); font-size:12px; letter-spacing:.05em; text-transform:uppercase; background:var(--bg-elev); color:var(--ink-dim); border:0; padding:9px 14px; cursor:pointer; transition:.15s}
+  .viewtoggle button[aria-pressed="true"]{background:var(--violet); color:#fff}
+  .viewtoggle button:focus-visible{outline:2px solid var(--cyan); outline-offset:-2px}
+
+  /* card art tiles */
+  .gallery{display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:12px}
+  .gallery[hidden]{display:none}
+  .tile{position:relative; aspect-ratio:1/1; border-radius:11px; overflow:hidden; border:1px solid var(--line); background:var(--bg-grid)}
+  .tile img{width:100%; height:100%; object-fit:cover; display:block}
+  .tile .ph{position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:8px; font-family:var(--mono); font-size:11px; color:var(--ink-dim)}
+  .tile .cap{position:absolute; left:0; right:0; bottom:0; padding:14px 8px 6px; font-size:11px; color:#fff; background:linear-gradient(transparent,rgba(4,2,16,.88)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .tile .vbadge{position:absolute; top:6px; right:6px; font-family:var(--mono); font-size:10px; padding:2px 6px; border-radius:9px; background:rgba(34,224,255,.18); color:var(--cyan); backdrop-filter:blur(2px)}
+  .tile.split{border-color:rgba(255,194,61,.6); box-shadow:0 0 14px rgba(255,194,61,.22)}
+  .tile.split .sbadge{position:absolute; top:6px; left:6px; font-size:11px; color:var(--gold); text-shadow:0 0 6px rgba(255,194,61,.8)}
+  .tile.locked img, .tile.locked .ph{filter:grayscale(1) brightness(.42)}
+  .tile.locked::after{content:"\1F512"; position:absolute; inset:0; display:grid; place-items:center; font-size:20px; opacity:.7}
+
+  /* completion missing expander */
+  .comp-row .comp-more{grid-column:1 / -1; margin-top:2px}
+  .comp-more button{font-family:var(--mono); font-size:11px; letter-spacing:.05em; text-transform:uppercase; background:transparent; color:var(--ink-faint); border:0; padding:4px 0; cursor:pointer}
+  .comp-more button:hover{color:var(--cyan)}
+  .comp-missing{margin-top:10px}
+  .comp-missing[hidden]{display:none}
+
+  footer{margin-top:64px; padding-top:20px; border-top:1px solid var(--line); font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); letter-spacing:.03em; display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px}
+
+  @media (max-width:640px){
+    .meter{grid-template-columns:120px 1fr 48px; gap:10px}
+    .comp-row{grid-template-columns:96px 1fr 110px; gap:10px}
+    .readout{gap:6px 18px}
+    .stat .sep{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .foil::before{animation:none}
+    .meter .fill, .comp-fill{transition:none; animation:none}
+    html{scroll-behavior:auto}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow" id="eyebrow">Collection Dossier</p>
+    <h1 class="title">Marvel <span class="snap">Snap</span></h1>
+    <p class="sub">Reads your local <b>CollectionState.json</b> in the browser. Your collection stays on your machine.</p>
+
+    <div class="toolbar">
+      <button id="btnSync" class="tb primary" title="Read the freshest CollectionState.json">&#8635; Sync</button>
+      <button id="btnCopy" class="tb" disabled title="Copy the collection as JSON to the clipboard">Copy to clipboard</button>
+      <button id="btnCsv" class="tb ghost" disabled>CSV</button>
+      <button id="btnJson" class="tb ghost" disabled>JSON</button>
+      <button id="btnReset" class="tb ghost" disabled title="Forget the loaded collection">Reset</button>
+      <span id="status" class="tb-status"></span>
+    </div>
+    <input id="fileInput" type="file" accept=".json,application/json" hidden>
+
+    <div class="empty" id="empty">
+      <h3>Load your collection</h3>
+      <p>Marvel Snap keeps your collection in a hidden Windows folder. Skip the hunt: copy the path below, hit <b>Sync</b>, and paste it into the file picker's <b>File name</b> box, then Open.</p>
+      <div class="pathbox">
+        <code id="pathText">%USERPROFILE%\AppData\LocalLow\Second Dinner\SNAP\Standalone\States\nvprod\CollectionState.json</code>
+        <button id="btnCopyPath" class="tb primary" type="button">Copy path</button>
+      </div>
+      <p class="fineprint"><code>%USERPROFILE%</code> fills in your username automatically. The file is read in your browser and saved on this device &mdash; nothing is uploaded. After the first time, Sync is one click.</p>
+    </div>
+
+    <div class="readout" id="readout" hidden></div>
+    <div class="dist" id="dist" hidden>
+      <div class="dist-bar" id="distBar"></div>
+      <div class="dist-key" id="distKey"></div>
+    </div>
+  </header>
+
+  <section id="completion" hidden>
+    <div class="sec-head"><h2>Series Completion</h2><p id="compMeta"></p></div>
+    <div class="comp" id="comp"></div>
+  </section>
+
+  <section id="history" hidden>
+    <div class="sec-head"><h2>Booster History</h2><p>Top 15 by lifetime boosters &mdash; where the hours went</p></div>
+    <div class="meters" id="meters"></div>
+  </section>
+
+  <section id="infinity" hidden>
+    <div class="sec-head"><h2>Infinity Roster</h2><p id="infCount"></p></div>
+    <div class="foil-grid" id="foilGrid"></div>
+  </section>
+
+  <section id="dormant" hidden>
+    <div class="sec-head"><h2>Dormant</h2><p id="dormCount"></p></div>
+    <div class="cloud" id="cloud"></div>
+  </section>
+
+  <section id="grid" hidden>
+    <div class="sec-head"><h2>Full Collection</h2><p>Click a header to sort</p></div>
+    <div class="controls">
+      <div class="search"><input id="q" type="search" placeholder="Filter by card name..." autocomplete="off"></div>
+      <div class="filters" id="filters">
+        <button data-f="all" aria-pressed="true">All</button>
+        <button data-f="split">Splits</button>
+        <button data-f="variants">Has variants</button>
+        <button data-f="dormant">Dormant</button>
+        <button data-f="recent">Recent</button>
+      </div>
+      <div class="viewtoggle" id="viewtoggle">
+        <button data-v="table" aria-pressed="true">Table</button>
+        <button data-v="gallery" aria-pressed="false">Gallery</button>
+      </div>
+    </div>
+    <div id="tableWrap">
+      <table>
+        <thead><tr>
+          <th data-k="name">Card</th>
+          <th data-k="variant_count">Variants</th>
+          <th data-k="boosters">Boosters</th>
+          <th data-k="lifetime_boosters">Lifetime</th>
+          <th data-k="splits">Splits</th>
+          <th data-k="acquired">Acquired</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="gallery" id="gallery" hidden></div>
+    <div class="rowcount" id="rowcount"></div>
+  </section>
+
+  <footer>
+    <span>snap-dossier &middot; local read of CollectionState.json</span>
+    <span id="footMeta">hosted on GitHub Pages</span>
+  </footer>
+</div>
+
+<script>
+"use strict";
+const CARDS_URL = "./cards.json";
+const LS_KEY = "snapDossier.collection";
+const SERIES_ORDER = ["Starter Card","Recruit Season","Series 1","Series 2","Series 3","Series 4","Series 5"];
+
+let currentData = null;   // array of card records (with card_def_id)
+let universe = [];        // slim card list from cards.json
+let liveHandle = null;    // FileSystemFileHandle for one-click re-sync
+let artIndex = new Map(); // carddefid -> art url
+let view = "table";       // "table" | "gallery"
+let _by = {}, _owned = new Set();  // cached for the completion missing-expanders
+
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => n.toLocaleString("en-US");
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function setStatus(msg, kind){ const s = $("status"); s.textContent = msg || ""; s.className = "tb-status" + (kind ? " " + kind : ""); }
+
+/* ---------- persistence (guarded; degrades gracefully off a real origin) ---------- */
+function saveCollection(records){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify({t:Date.now(), records})); }catch(e){}
+}
+function loadCollection(){
+  try{ const s = localStorage.getItem(LS_KEY); return s ? JSON.parse(s) : null; }catch(e){ return null; }
+}
+function clearCollection(){ try{ localStorage.removeItem(LS_KEY); }catch(e){} }
+
+function idb(){
+  return new Promise((res, rej) => {
+    const o = indexedDB.open("snapDossier", 1);
+    o.onupgradeneeded = () => o.result.createObjectStore("kv");
+    o.onsuccess = () => res(o.result); o.onerror = () => rej(o.error);
+  });
+}
+async function idbSet(k, v){ try{ const db = await idb(); await new Promise((res,rej)=>{const t=db.transaction("kv","readwrite");t.objectStore("kv").put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error);}); }catch(e){} }
+async function idbGet(k){ try{ const db = await idb(); return await new Promise((res,rej)=>{const t=db.transaction("kv","readonly");const r=t.objectStore("kv").get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}); }catch(e){ return null; } }
+async function idbDel(k){ try{ const db = await idb(); await new Promise((res,rej)=>{const t=db.transaction("kv","readwrite");t.objectStore("kv").delete(k);t.oncomplete=res;t.onerror=()=>rej(t.error);}); }catch(e){} }
+
+/* ---------- parse (mirrors the reference parser) ---------- */
+function prettify(cid){
+  return cid.replace(/([a-z0-9])(?=[A-Z])/g, "$1 ").replace(/([A-Za-z])(?=[0-9])/g, "$1 ").trim();
+}
+function parseCollection(json){
+  const server = json.ServerState;
+  if (!server || typeof server !== "object") throw new Error("no ServerState - not a CollectionState.json");
+  const cards = server.Cards || [];
+  const stats = (server.CardDefStats && server.CardDefStats.Stats) || {};
+  const col = {};
+  for (const e of cards){
+    const cid = e.CardDefId; if (!cid) continue;
+    const rec = col[cid] || (col[cid] = {card_def_id: cid, name: prettify(cid), variants: new Set(), boosters: 0, lifetime_boosters: 0, splits: 0, acquired: null});
+    if (e.ArtVariantDefId) rec.variants.add(e.ArtVariantDefId);
+    const t = e.TimeCreated ? Date.parse(e.TimeCreated) : NaN;   // earliest = when the card was first pulled
+    if (!isNaN(t)) rec.acquired = (rec.acquired == null) ? t : Math.min(rec.acquired, t);
+  }
+  for (const cid in stats){
+    if (!(cid in col)) continue;
+    const s = stats[cid];
+    col[cid].boosters = s.Boosters || 0;
+    col[cid].lifetime_boosters = s.BoostersLifetime || 0;
+    col[cid].splits = s.InfinitySplitCount || 0;
+  }
+  return Object.values(col).map(r => ({
+    card_def_id: r.card_def_id, name: r.name, variant_count: r.variants.size,
+    boosters: r.boosters, lifetime_boosters: r.lifetime_boosters, splits: r.splits, acquired: r.acquired,
+  })).sort((a,b) => a.name.localeCompare(b.name));
+}
+
+/* ---------- card art tile (shared by gallery + missing strips) ---------- */
+function cardTile({name, art, variants = 0, splits = 0, locked = false}){
+  const cls = (splits > 0 && !locked ? "split " : "") + (locked ? "locked" : "");
+  const img = art
+    ? `<img loading="lazy" src="${esc(art)}" alt="${esc(name)}" `
+      + `onerror="this.style.display='none';this.parentElement.querySelector('.ph').style.display='grid'">`
+      + `<div class="ph" style="display:none">${esc(name)}</div>`
+    : `<div class="ph">${esc(name)}</div>`;
+  const sbadge = (splits > 0 && !locked) ? `<span class="sbadge">\u25C6${splits > 1 ? splits : ""}</span>` : "";
+  const vbadge = (variants > 0 && !locked) ? `<span class="vbadge">\u00D7${variants}</span>` : "";
+  return `<div class="tile ${cls}" title="${esc(name)}">${img}${sbadge}${vbadge}<div class="cap">${esc(name)}</div></div>`;
+}
+
+/* ---------- completion ---------- */
+function collectibleSeries(cards){
+  // {series: [card records]} for released, collectible characters
+  const by = {};
+  for (const c of cards){
+    if (c.status !== "released") continue;
+    const slug = (c.source_slug || "").toLowerCase();
+    if (slug === "" || slug === "none") continue;
+    if (c.type && c.type !== "Character") continue;
+    if (!c.carddefid) continue;
+    (by[c.source || "Unknown"] || (by[c.source || "Unknown"] = [])).push(c);
+  }
+  return by;
+}
+
+function renderCompletion(){
+  const sec = $("completion");
+  if (!currentData){ sec.hidden = true; return; }
+  sec.hidden = false;
+  if (!universe.length){
+    $("compMeta").textContent = "card database not loaded";
+    $("comp").innerHTML = `<div class="comp-note">No <code>cards.json</code> yet. Run the <b>Refresh card data</b> workflow (Actions tab &rarr; Run workflow), then reload this page.</div>`;
+    return;
+  }
+  const by = collectibleSeries(universe);
+  const owned = new Set(currentData.map(r => r.card_def_id));
+  _by = by; _owned = owned;
+
+  const seriesList = Object.keys(by).sort((a, b) => {
+    const ia = SERIES_ORDER.indexOf(a), ib = SERIES_ORDER.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+  });
+
+  const pctFmt = (v) => (v % 1 === 0 ? v.toFixed(0) : v.toFixed(1));
+  const uni = new Set();
+  let html = "";
+  for (const s of seriesList){
+    const recs = by[s];
+    let have = 0;
+    for (const c of recs){ uni.add(c.carddefid); if (owned.has(c.carddefid)) have++; }
+    const total = recs.length, miss = total - have, done = have === total;
+    const pctv = total ? have / total * 100 : 0;
+    html += `<div class="comp-row">`
+      + `<span class="comp-label">${esc(s)}</span>`
+      + `<span class="comp-track"><span class="comp-fill${done ? " done" : ""}" style="width:${pctv.toFixed(1)}%"></span></span>`
+      + `<span class="comp-val"><b class="${done ? "pdone" : ""}">${pctFmt(pctv)}%</b> <span class="miss">${have}/${total}</span></span>`
+      + (miss > 0
+          ? `<div class="comp-more"><button data-series="${esc(s)}" aria-expanded="false">\u25B8 show ${miss} missing</button><div class="comp-missing" hidden></div></div>`
+          : "")
+      + `</div>`;
+  }
+  let th = 0; uni.forEach(id => { if (owned.has(id)) th++; });
+  const tot = uni.size, tpct = tot ? th / tot * 100 : 0;
+  html += `<div class="comp-row comp-total"><span class="comp-label">Total</span>`
+    + `<span class="comp-track"><span class="comp-fill${th === tot ? " done" : ""}" style="width:${tpct.toFixed(1)}%"></span></span>`
+    + `<span class="comp-val"><b class="${th === tot ? "pdone" : ""}">${pctFmt(tpct)}%</b> <span class="miss">${th}/${tot}</span></span></div>`;
+
+  $("comp").innerHTML = html;
+  $("compMeta").textContent = `${th}/${tot} released cards \u00b7 ${tot-th} missing`;
+}
+
+// Lazy-reveal missing card art per series.
+$("comp").addEventListener("click", e => {
+  const btn = e.target.closest(".comp-more button"); if (!btn) return;
+  const box = btn.nextElementSibling;
+  const open = btn.getAttribute("aria-expanded") === "true";
+  if (open){
+    box.hidden = true; btn.setAttribute("aria-expanded", "false");
+    btn.textContent = btn.textContent.replace("\u25BE", "\u25B8");
+    return;
+  }
+  if (!box.dataset.filled){
+    const recs = (_by[btn.dataset.series] || [])
+      .filter(c => !_owned.has(c.carddefid))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    box.innerHTML = `<div class="gallery">`
+      + recs.map(c => cardTile({name: c.name, art: c.art, locked: true})).join("")
+      + `</div>`;
+    box.dataset.filled = "1";
+  }
+  box.hidden = false; btn.setAttribute("aria-expanded", "true");
+  btn.textContent = btn.textContent.replace("\u25B8", "\u25BE");
+});
+
+/* ---------- render ---------- */
+let sortKey = "name", sortDir = 1, filter = "all", query = "";
+
+function setLoaded(has){
+  $("empty").hidden = has;
+  ["readout","dist","history","infinity","dormant","grid"].forEach(id => $(id).hidden = !has);
+  ["btnCopy","btnCsv","btnJson","btnReset"].forEach(id => $(id).disabled = !has);
+}
+
+function renderAll(){
+  if (!currentData){ setLoaded(false); renderCompletion(); return; }
+  setLoaded(true);
+  const D = currentData;
+  const sum = (k) => D.reduce((a, r) => a + (r[k] || 0), 0);
+  const totalCards = D.length, totalVariants = sum("variant_count"), totalSplits = sum("splits");
+  const splitCards = D.filter(r => r.splits > 0);
+  const dormant = D.filter(r => (r.lifetime_boosters || 0) === 0);
+  const activeNoSplit = totalCards - splitCards.length - dormant.length;
+
+  $("readout").innerHTML = [
+    `<div class="stat"><span class="n">${fmt(totalCards)}</span><span class="l">Cards</span></div>`,
+    `<span class="sep">/</span>`,
+    `<div class="stat"><span class="n">${fmt(totalVariants)}</span><span class="l">Variants</span></div>`,
+    `<span class="sep">/</span>`,
+    `<div class="stat gold"><span class="n">${fmt(totalSplits)}</span><span class="l">Infinity Splits</span></div>`,
+  ].join("");
+
+  const pct = (n) => (totalCards ? (n/totalCards*100) : 0).toFixed(2) + "%";
+  $("distBar").innerHTML =
+    `<span class="seg-split" style="width:${pct(splitCards.length)}"></span>` +
+    `<span class="seg-active" style="width:${pct(activeNoSplit)}"></span>` +
+    `<span class="seg-dormant" style="width:${pct(dormant.length)}"></span>`;
+  $("distKey").innerHTML =
+    `<span><i class="seg-split"></i><b>${splitCards.length}</b> with splits</span>` +
+    `<span><i class="seg-active"></i><b>${activeNoSplit}</b> leveled, no split</span>` +
+    `<span><i class="seg-dormant" style="border:1px solid var(--line)"></i><b>${dormant.length}</b> dormant</span>`;
+
+  const top = [...D].sort((a,b) => b.lifetime_boosters - a.lifetime_boosters).slice(0,15);
+  const maxLife = top.length ? (top[0].lifetime_boosters || 1) : 1;
+  $("meters").innerHTML = top.map(r =>
+    `<div class="meter"><span class="name">${esc(r.name)}</span>`
+    + `<span class="track"><span class="fill" style="width:${(r.lifetime_boosters/maxLife*100).toFixed(1)}%"></span></span>`
+    + `<span class="val">${fmt(r.lifetime_boosters)}</span></div>`).join("");
+
+  const roster = [...splitCards].sort((a,b) => b.splits - a.splits || b.lifetime_boosters - a.lifetime_boosters);
+  $("infCount").textContent = `${splitCards.length} cards \u00b7 ${totalSplits} splits total`;
+  $("foilGrid").innerHTML = roster.map(r => {
+    const pips = Array.from({length: r.splits}, () => "<i></i>").join("");
+    return `<div class="foil"><div class="pips">${pips}</div><div class="fname">${esc(r.name)}</div>`
+      + `<div class="fmeta">${r.splits} split${r.splits>1?"s":""} \u00b7 ${fmt(r.lifetime_boosters)} lifetime</div></div>`;
+  }).join("");
+
+  $("dormCount").textContent = `${dormant.length} owned but never leveled`;
+  $("cloud").innerHTML = [...dormant].sort((a,b) => a.name.localeCompare(b.name))
+    .map(r => `<span class="chip">${esc(r.name)}</span>`).join("");
+
+  renderGrid();
+  renderCompletion();
+}
+
+function renderGrid(){
+  const RECENT_MS = 30 * 864e5;  // 30 days
+  const preds = {
+    all: () => true,
+    split: r => r.splits > 0,
+    variants: r => r.variant_count > 0,
+    dormant: r => (r.lifetime_boosters || 0) === 0,
+    recent: r => r.acquired && (Date.now() - r.acquired) < RECENT_MS,
+  };
+  let rows = currentData.filter(preds[filter]);
+  if (query) rows = rows.filter(r => r.name.toLowerCase().includes(query));
+  rows.sort((a,b) => {
+    let av = a[sortKey], bv = b[sortKey];
+    if (typeof av === "string") return av.localeCompare(bv) * sortDir;
+    return ((av || 0) - (bv || 0)) * sortDir;
+  });
+
+  if (view === "gallery"){
+    $("tableWrap").hidden = true;
+    $("gallery").hidden = false;
+    $("gallery").innerHTML = rows.map(r => cardTile({
+      name: r.name, art: artIndex.get(r.card_def_id),
+      variants: r.variant_count, splits: r.splits,
+    })).join("");
+  } else {
+    $("gallery").hidden = true;
+    $("tableWrap").hidden = false;
+    const fmtDate = (ms) => ms ? new Date(ms).toLocaleDateString("en-US", {year:"numeric", month:"short", day:"numeric"}) : "\u2014";
+    const cell = (v, cls) => v === 0 ? `<td><span class="zero">0</span></td>` : `<td>${cls ? `<span class="${cls}">${v}</span>` : fmt(v)}</td>`;
+    $("tbody").innerHTML = rows.map(r =>
+      `<tr class="${r.splits>0?"split":""}"><td>${esc(r.name)}</td>`
+      + cell(r.variant_count, r.variant_count ? "v-pill" : "")
+      + cell(r.boosters) + cell(r.lifetime_boosters)
+      + cell(r.splits, r.splits ? "split-pill" : "")
+      + `<td class="date">${fmtDate(r.acquired)}</td></tr>`).join("");
+  }
+  $("rowcount").textContent = `${rows.length} of ${currentData.length} cards`;
+}
+
+/* ---------- grid events ---------- */
+document.querySelectorAll("thead th").forEach(th => th.addEventListener("click", () => {
+  if (!currentData) return;
+  const k = th.dataset.k;
+  if (k === sortKey) sortDir *= -1; else { sortKey = k; sortDir = (k === "name") ? 1 : -1; }
+  document.querySelectorAll("thead th").forEach(x => x.classList.remove("up","down"));
+  th.classList.add(sortDir === 1 ? "up" : "down");
+  renderGrid();
+}));
+$("filters").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  filter = b.dataset.f;
+  document.querySelectorAll("#filters button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  renderGrid();
+});
+$("q").addEventListener("input", e => { query = e.target.value.trim().toLowerCase(); renderGrid(); });
+$("viewtoggle").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  view = b.dataset.v;
+  document.querySelectorAll("#viewtoggle button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  renderGrid();
+});
+
+/* ---------- ingest + sync ---------- */
+function ingest(text, name){
+  try{
+    const json = JSON.parse(text.replace(/^\uFEFF/, ""));
+    const recs = parseCollection(json);
+    if (!recs.length) throw new Error("no owned cards found");
+    currentData = recs;
+    saveCollection(recs);
+    renderAll();
+    setStatus(`Synced ${recs.length} cards from ${name} \u00b7 ${new Date().toLocaleTimeString()}`, "ok");
+    $("eyebrow").textContent = "Collection Dossier \u00b7 LIVE";
+  }catch(err){ setStatus("Couldn't read that file: " + err.message, "warn"); }
+}
+
+async function readHandle(h){
+  let perm = (h.queryPermission ? await h.queryPermission({mode:"read"}) : "granted");
+  if (perm !== "granted") perm = await h.requestPermission({mode:"read"});
+  if (perm !== "granted"){ setStatus("Read permission denied", "warn"); return; }
+  const file = await h.getFile();
+  ingest(await file.text(), file.name);
+}
+
+$("btnSync").addEventListener("click", async () => {
+  try{
+    let handle = liveHandle || await idbGet("handle");
+    if (handle){ setStatus("Re-reading\u2026"); liveHandle = handle; await readHandle(handle); return; }
+    if (window.showOpenFilePicker){
+      setStatus("Paste the copied path into the File name box\u2026");
+      [handle] = await window.showOpenFilePicker({ types:[{description:"Marvel Snap state", accept:{"application/json":[".json"]}}] });
+      liveHandle = handle;
+      await idbSet("handle", handle);
+      await readHandle(handle);
+    } else {
+      $("fileInput").click();  // Firefox / no File System Access API
+    }
+  }catch(err){
+    if (err && err.name === "AbortError") setStatus("");
+    else setStatus("Sync failed: " + (err && err.message || err), "warn");
+  }
+});
+$("fileInput").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => ingest(rd.result, f.name);
+  rd.readAsText(f);
+});
+
+$("btnCopyPath").addEventListener("click", async () => {
+  const p = $("pathText").textContent.trim();
+  const b = $("btnCopyPath");
+  const flash = () => { const t = b.textContent; b.textContent = "Copied!"; setTimeout(() => b.textContent = t, 1400); };
+  try{ await navigator.clipboard.writeText(p); flash(); }
+  catch(e){
+    const ta = document.createElement("textarea"); ta.value = p; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); flash(); }catch(_){}
+    ta.remove();
+  }
+});
+
+$("btnReset").addEventListener("click", async () => {
+  currentData = null; liveHandle = null;
+  clearCollection(); await idbDel("handle");
+  $("eyebrow").textContent = "Collection Dossier";
+  renderAll();
+  setStatus("Cleared. Sync to load again.", "ok");
+});
+
+/* ---------- export ---------- */
+function download(name, text, mime){
+  const blob = new Blob([text], {type: mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function toCsv(){
+  const head = "Name,CardDefId,VariantCount,Boosters,LifetimeBoosters,InfinitySplits,Acquired";
+  const rows = currentData.map(r => [
+    `"${r.name.replace(/"/g,'""')}"`, r.card_def_id, r.variant_count, r.boosters, r.lifetime_boosters, r.splits,
+    r.acquired ? new Date(r.acquired).toISOString().slice(0, 10) : ""
+  ].join(","));
+  return [head, ...rows].join("\r\n");
+}
+$("btnCopy").addEventListener("click", async () => {
+  if (!currentData) return;
+  const text = JSON.stringify(currentData);
+  try{ await navigator.clipboard.writeText(text); setStatus(`Copied ${currentData.length} cards to clipboard`, "ok"); }
+  catch(e){
+    const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); setStatus(`Copied ${currentData.length} cards to clipboard`, "ok"); }
+    catch(_){ setStatus("Copy blocked - use JSON download", "warn"); }
+    ta.remove();
+  }
+});
+$("btnCsv").addEventListener("click", () => { if (currentData){ download("marvel_snap_collection.csv", toCsv(), "text/csv"); setStatus("Downloaded CSV", "ok"); } });
+$("btnJson").addEventListener("click", () => { if (currentData){ download("marvel_snap_collection.json", JSON.stringify(currentData, null, 2), "application/json"); setStatus("Downloaded JSON", "ok"); } });
+
+/* ---------- boot ---------- */
+(async function init(){
+  const saved = loadCollection();
+  if (saved && Array.isArray(saved.records)){
+    currentData = saved.records;
+    if (saved.t) $("footMeta").textContent = `synced ${new Date(saved.t).toLocaleDateString()} \u00b7 GitHub Pages`;
+    $("eyebrow").textContent = "Collection Dossier \u00b7 LIVE";
+  }
+  try{
+    const res = await fetch(CARDS_URL, {cache: "no-cache"});
+    if (res.ok){
+      const data = await res.json();
+      if (Array.isArray(data)){
+        universe = data;
+        artIndex = new Map();
+        for (const c of universe){ if (c.carddefid && c.art) artIndex.set(c.carddefid, c.art); }
+      }
+    }
+  }catch(e){ /* offline or placeholder; completion + gallery degrade to text */ }
+  renderAll();
+  if (currentData) setStatus(`Loaded ${currentData.length} cards from this browser`, "ok");
+})();
+</script>
+</body>
+</html>

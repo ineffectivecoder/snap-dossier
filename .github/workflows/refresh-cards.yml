@@ -1,0 +1,40 @@
+name: Refresh card data
+
+# Keeps cards.json in sync with MarvelSnapZone so series-completion stays
+# accurate through monthly Series Drops. Runs weekly and on demand.
+on:
+  schedule:
+    - cron: "0 12 * * 1"      # Mondays, 12:00 UTC
+  workflow_dispatch: {}        # lets you run it manually from the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-cards
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch and slim card data
+        run: python scripts/refresh_cards.py
+
+      - name: Commit if changed
+        run: |
+          if [[ -n "$(git status --porcelain cards.json)" ]]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add cards.json
+            git commit -m "chore: refresh card data ($(date -u +%Y-%m-%d))"
+            git push
+          else
+            echo "cards.json unchanged."
+          fi
