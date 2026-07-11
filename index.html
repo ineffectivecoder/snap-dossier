@@ -80,6 +80,26 @@
   .dist-key i{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:7px; vertical-align:middle}
   .dist-key b{color:var(--ink)}
 
+  /* profile identity + career */
+  .identity{font-family:var(--mono); font-size:12.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); margin:26px 0 0}
+  .identity b{color:#fff; letter-spacing:.02em}
+  .career{font-family:var(--mono); font-size:12.5px; letter-spacing:.04em; color:var(--ink-dim); margin:10px 0 0}
+  .career b{color:var(--cyan)}
+
+  /* cube impact */
+  .cube-cols{display:grid; grid-template-columns:1fr 1fr; gap:28px}
+  .cube-list{display:grid; gap:6px}
+  .cube-row{display:grid; grid-template-columns:34px 1fr auto; align-items:center; gap:11px}
+  .cube-thumb{position:relative; display:block; width:34px; height:34px; border-radius:6px; overflow:hidden; border:1px solid var(--line); background:var(--bg-grid)}
+  .cube-thumb img{width:100%; height:100%; object-fit:cover; display:block}
+  .cube-thumb .ph{position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:2px; font-family:var(--mono); font-size:6px; line-height:1; color:var(--ink-dim)}
+  .cube-name{font-size:13px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .cube-val{font-family:var(--mono); font-size:13px; font-weight:600; text-align:right}
+  .cube-val.pos{color:var(--cyan)}
+  .cube-val.neg{color:var(--magenta)}
+  .cube-empty{font-family:var(--mono); font-size:12px; color:var(--ink-faint)}
+  @media (max-width:640px){ .cube-cols{grid-template-columns:1fr; gap:24px} }
+
   section{margin-top:56px}
   section[hidden]{display:none}
   .sec-head{display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:20px}
@@ -217,6 +237,7 @@
 
     <div class="toolbar">
       <button id="btnSync" class="tb primary" title="Read the freshest CollectionState.json">&#8635; Sync</button>
+      <button id="btnProfile" class="tb ghost" disabled title="Add W-L record + cube stats from ProfileState.json">+ Profile stats</button>
       <button id="btnCopy" class="tb" disabled title="Copy the collection as JSON to the clipboard">Copy to clipboard</button>
       <button id="btnCsv" class="tb ghost" disabled>CSV</button>
       <button id="btnJson" class="tb ghost" disabled>JSON</button>
@@ -224,6 +245,7 @@
       <span id="status" class="tb-status"></span>
     </div>
     <input id="fileInput" type="file" accept=".json,application/json" hidden>
+    <input id="profileInput" type="file" accept=".json,application/json" hidden>
 
     <div class="empty" id="empty">
       <h3>Load your collection</h3>
@@ -235,12 +257,22 @@
       <p class="fineprint"><code>%USERPROFILE%</code> fills in your username automatically. The file is read in your browser and saved on this device &mdash; nothing is uploaded. After the first time, Sync is one click.</p>
     </div>
 
+    <p class="identity" id="identity" hidden></p>
     <div class="readout" id="readout" hidden></div>
+    <p class="career" id="career" hidden></p>
     <div class="dist" id="dist" hidden>
       <div class="dist-bar" id="distBar"></div>
       <div class="dist-key" id="distKey"></div>
     </div>
   </header>
+
+  <section id="cubes" hidden>
+    <div class="sec-head"><h2>Cube Impact</h2><p id="cubeMeta"></p></div>
+    <div class="cube-cols">
+      <div class="cube-col"><div class="deck-sub">Cube leaders</div><div id="cubeLeaders" class="cube-list"></div></div>
+      <div class="cube-col"><div class="deck-sub">Cube sinks</div><div id="cubeSinks" class="cube-list"></div></div>
+    </div>
+  </section>
 
   <section id="completion" hidden>
     <div class="sec-head"><h2>Series Completion</h2><p id="compMeta"></p></div>
@@ -314,10 +346,14 @@
 "use strict";
 const CARDS_URL = "./cards.json";
 const LS_KEY = "snapDossier.collection";
+const LS_PROFILE = "snapDossier.profile";
 const SERIES_ORDER = ["Starter Card","Recruit Season","Series 1","Series 2","Series 3","Series 4","Series 5"];
 
 let currentData = null;   // array of card records (with card_def_id)
 let currentDecks = [];    // array of deck objects
+let currentLevel = null;  // Collection Level (CollectionScore) from CollectionState
+let currentProfile = null;// {name, tag, wins, losses, ties, snaps, concedes, cardStats}
+let liveProfileHandle = null;
 let universe = [];        // slim card list from cards.json
 let liveHandle = null;    // FileSystemFileHandle for one-click re-sync
 let artIndex = new Map(); // carddefid -> art url
@@ -331,7 +367,13 @@ function setStatus(msg, kind){ const s = $("status"); s.textContent = msg || "";
 
 /* ---------- persistence (guarded; degrades gracefully off a real origin) ---------- */
 function saveCollection(){
-  try{ localStorage.setItem(LS_KEY, JSON.stringify({t:Date.now(), records:currentData, decks:currentDecks})); }catch(e){}
+  try{ localStorage.setItem(LS_KEY, JSON.stringify({t:Date.now(), records:currentData, decks:currentDecks, level:currentLevel})); }catch(e){}
+}
+function saveProfile(){
+  try{ localStorage.setItem(LS_PROFILE, JSON.stringify({t:Date.now(), profile:currentProfile})); }catch(e){}
+}
+function loadProfile(){
+  try{ const s = localStorage.getItem(LS_PROFILE); return s ? JSON.parse(s) : null; }catch(e){ return null; }
 }
 function loadCollection(){
   try{ const s = localStorage.getItem(LS_KEY); return s ? JSON.parse(s) : null; }catch(e){ return null; }
@@ -394,6 +436,45 @@ function parseDecks(json){
     };
   }).filter(d => d.count > 0)                 // drop empty deck slots
     .sort((a, b) => (b.updated || 0) - (a.updated || 0));  // most-recent first
+}
+
+// Collection Level lives as "CollectionScore" in CollectionState.json.
+function deepFind(obj, key){
+  if (obj == null || typeof obj !== "object") return undefined;
+  if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key];
+  for (const k in obj){
+    const v = deepFind(obj[k], key);
+    if (v !== undefined) return v;
+  }
+  return undefined;
+}
+function extractLevel(json){
+  const s = json.ServerState;
+  if (s && typeof s.CollectionScore === "number") return s.CollectionScore;
+  const v = deepFind(json, "CollectionScore");
+  return typeof v === "number" ? v : null;
+}
+
+// ProfileState.json -> career record, snaps, and per-card net cubes.
+function parseProfile(json){
+  const acc = (json.ServerState && json.ServerState.Account) || {};
+  const raw = (acc.CardStats && typeof acc.CardStats === "object") ? acc.CardStats : {};
+  const cardStats = {};
+  for (const k in raw){
+    if (k.startsWith("$")) continue;
+    if (typeof raw[k] === "number") cardStats[k] = raw[k];
+  }
+  return {
+    name: acc.Name || null,
+    tag: acc.Tag != null ? acc.Tag : null,
+    wins: acc.Wins != null ? acc.Wins : null,
+    losses: acc.Losses != null ? acc.Losses : null,
+    ties: acc.Ties != null ? acc.Ties : null,
+    snaps: acc.Snaps != null ? acc.Snaps : null,
+    concedes: acc.Concedes != null ? acc.Concedes : null,
+    oppConcedes: acc.OpponentConcedes != null ? acc.OpponentConcedes : null,
+    cardStats,
+  };
 }
 
 /* ---------- card art tile (shared by gallery + missing strips) ---------- */
@@ -538,17 +619,66 @@ function renderDecks(){
   }).join("");
 }
 
+/* ---------- profile (identity + career + cubes) ---------- */
+function renderProfile(){
+  // identity line: player name (if profile) + collection level (from collection)
+  const idParts = [];
+  if (currentProfile && currentProfile.name)
+    idParts.push(`<b>${esc(currentProfile.name)}</b>${currentProfile.tag != null ? ` #${currentProfile.tag}` : ""}`);
+  if (currentLevel != null) idParts.push(`Collection Level ${fmt(currentLevel)}`);
+  const idEl = $("identity");
+  if (currentData && idParts.length){ idEl.hidden = false; idEl.innerHTML = idParts.join(" &middot; "); }
+  else idEl.hidden = true;
+
+  // career strip
+  const c = currentProfile, careerEl = $("career");
+  if (currentData && c && c.wins != null){
+    const decided = c.wins + c.losses;
+    const wr = decided > 0 ? Math.round(c.wins / decided * 100) : 0;
+    const bits = [`<b>${fmt(c.wins)}\u2013${fmt(c.losses)}\u2013${fmt(c.ties || 0)}</b>`, `${wr}% WR`];
+    if (c.snaps != null) bits.push(`${fmt(c.snaps)} snaps`);
+    if (c.concedes != null) bits.push(`${fmt(c.concedes)} retreats`);
+    careerEl.hidden = false; careerEl.innerHTML = bits.join(" &middot; ");
+  } else careerEl.hidden = true;
+
+  renderCubes();
+}
+
+function renderCubes(){
+  const sec = $("cubes");
+  const stats = currentProfile && currentProfile.cardStats;
+  const entries = stats ? Object.entries(stats) : [];
+  if (!currentData || !entries.length){ sec.hidden = true; return; }
+  sec.hidden = false;
+
+  const leaders = entries.filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const sinks = entries.filter(([, v]) => v < 0).sort((a, b) => a[1] - b[1]).slice(0, 10);
+  const net = entries.reduce((s, [, v]) => s + v, 0);
+  $("cubeMeta").textContent = `net ${net >= 0 ? "+" : ""}${fmt(net)} cubes across ${entries.length} cards`;
+
+  const row = ([cid, v], kind) => {
+    const nm = prettify(cid), art = artIndex.get(cid);
+    const thumb = art
+      ? `<span class="cube-thumb"><img loading="lazy" src="${esc(art)}" alt="" onerror="imgFallback(this)"><span class="ph" style="display:none">${esc(nm)}</span></span>`
+      : `<span class="cube-thumb"><span class="ph">${esc(nm)}</span></span>`;
+    return `<div class="cube-row">${thumb}<span class="cube-name">${esc(nm)}</span>`
+      + `<span class="cube-val ${kind}">${v > 0 ? "+" : ""}${v}</span></div>`;
+  };
+  $("cubeLeaders").innerHTML = leaders.map(e => row(e, "pos")).join("") || `<div class="cube-empty">none yet</div>`;
+  $("cubeSinks").innerHTML = sinks.map(e => row(e, "neg")).join("") || `<div class="cube-empty">none yet</div>`;
+}
+
 /* ---------- render ---------- */
 let sortKey = "name", sortDir = 1, filter = "all", query = "";
 
 function setLoaded(has){
   $("empty").hidden = has;
   ["readout","dist","history","infinity","dormant","grid"].forEach(id => $(id).hidden = !has);
-  ["btnCopy","btnCsv","btnJson","btnReset"].forEach(id => $(id).disabled = !has);
+  ["btnCopy","btnCsv","btnJson","btnReset","btnProfile"].forEach(id => $(id).disabled = !has);
 }
 
 function renderAll(){
-  if (!currentData){ setLoaded(false); renderCompletion(); renderDecks(); return; }
+  if (!currentData){ setLoaded(false); renderCompletion(); renderDecks(); renderProfile(); return; }
   setLoaded(true);
   const D = currentData;
   const sum = (k) => D.reduce((a, r) => a + (r[k] || 0), 0);
@@ -597,6 +727,7 @@ function renderAll(){
   renderGrid();
   renderCompletion();
   renderDecks();
+  renderProfile();
 }
 
 function renderGrid(){
@@ -669,6 +800,7 @@ function ingest(text, name){
     if (!recs.length) throw new Error("no owned cards found");
     currentData = recs;
     currentDecks = parseDecks(json);
+    currentLevel = extractLevel(json);
     saveCollection();
     renderAll();
     setStatus(`Synced ${recs.length} cards from ${name} \u00b7 ${new Date().toLocaleTimeString()}`, "ok");
@@ -709,6 +841,49 @@ $("fileInput").addEventListener("change", e => {
   rd.readAsText(f);
 });
 
+/* ---------- profile sync (second file: ProfileState.json) ---------- */
+function ingestProfile(text, name){
+  try{
+    const json = JSON.parse(text.replace(/^\uFEFF/, ""));
+    const p = parseProfile(json);
+    if (p.wins == null && !Object.keys(p.cardStats).length)
+      throw new Error("no profile data - is this ProfileState.json?");
+    currentProfile = p;
+    saveProfile();
+    renderProfile();
+    setStatus(`Profile loaded \u2014 ${p.name || "player"}${p.wins != null ? `, ${p.wins}\u2013${p.losses}` : ""}`, "ok");
+  }catch(err){ setStatus("Couldn't read profile: " + err.message, "warn"); }
+}
+async function readProfileHandle(h){
+  let perm = h.queryPermission ? await h.queryPermission({mode:"read"}) : "granted";
+  if (perm !== "granted") perm = await h.requestPermission({mode:"read"});
+  if (perm !== "granted"){ setStatus("Read permission denied", "warn"); return; }
+  const file = await h.getFile();
+  ingestProfile(await file.text(), file.name);
+}
+$("btnProfile").addEventListener("click", async () => {
+  try{
+    let handle = liveProfileHandle || await idbGet("profileHandle");
+    if (handle){ setStatus("Re-reading profile\u2026"); liveProfileHandle = handle; await readProfileHandle(handle); return; }
+    if (window.showOpenFilePicker){
+      setStatus("Pick ProfileState.json (same nvprod folder)\u2026");
+      [handle] = await window.showOpenFilePicker({ types:[{description:"Marvel Snap profile", accept:{"application/json":[".json"]}}] });
+      liveProfileHandle = handle;
+      await idbSet("profileHandle", handle);
+      await readProfileHandle(handle);
+    } else { $("profileInput").click(); }
+  }catch(err){
+    if (err && err.name === "AbortError") setStatus("");
+    else setStatus("Profile sync failed: " + (err && err.message || err), "warn");
+  }
+});
+$("profileInput").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => ingestProfile(rd.result, f.name);
+  rd.readAsText(f);
+});
+
 $("btnCopyPath").addEventListener("click", async () => {
   const p = $("pathText").textContent.trim();
   const b = $("btnCopyPath");
@@ -723,8 +898,10 @@ $("btnCopyPath").addEventListener("click", async () => {
 });
 
 $("btnReset").addEventListener("click", async () => {
-  currentData = null; currentDecks = []; liveHandle = null;
-  clearCollection(); await idbDel("handle");
+  currentData = null; currentDecks = []; currentLevel = null; currentProfile = null;
+  liveHandle = null; liveProfileHandle = null;
+  clearCollection(); try{ localStorage.removeItem(LS_PROFILE); }catch(e){}
+  await idbDel("handle"); await idbDel("profileHandle");
   $("eyebrow").textContent = "Collection Dossier";
   renderAll();
   setStatus("Cleared. Sync to load again.", "ok");
@@ -767,9 +944,12 @@ $("btnJson").addEventListener("click", () => { if (currentData){ download("marve
   if (saved && Array.isArray(saved.records)){
     currentData = saved.records;
     currentDecks = Array.isArray(saved.decks) ? saved.decks : [];
+    currentLevel = (typeof saved.level === "number") ? saved.level : null;
     if (saved.t) $("footMeta").textContent = `synced ${new Date(saved.t).toLocaleDateString()} \u00b7 GitHub Pages`;
     $("eyebrow").textContent = "Collection Dossier \u00b7 LIVE";
   }
+  const savedProfile = loadProfile();
+  if (savedProfile && savedProfile.profile) currentProfile = savedProfile.profile;
   try{
     const res = await fetch(CARDS_URL, {cache: "no-cache"});
     if (res.ok){
