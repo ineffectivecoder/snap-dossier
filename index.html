@@ -132,8 +132,11 @@
   a.tb{text-decoration:none}
 
   /* card detail overlay */
-  .tile[data-cid]{cursor:pointer}
+  .tile[data-cid], .cube-row[data-cid], .dcard[data-cid]{cursor:pointer}
   tbody tr[data-cid]{cursor:pointer}
+  .card-info{position:absolute; top:3px; right:3px; z-index:3; width:18px; height:18px; padding:0; border-radius:50%; border:1px solid var(--line); background:rgba(11,10,31,.82); color:var(--cyan); font-family:var(--body); font-weight:700; font-style:italic; font-size:11px; line-height:16px; text-align:center; cursor:pointer; opacity:0; transition:opacity .12s}
+  .bcard:hover .card-info, .slot.filled:hover .card-info{opacity:1}
+  .card-info:hover{border-color:var(--cyan); color:#fff}
   tbody tr[data-cid]:hover td{background:var(--bg-grid)}
   .detail-modal{display:flex; gap:22px; width:min(620px,94vw); background:var(--bg-elev); border:1px solid var(--line); border-radius:16px; padding:22px; box-shadow:0 24px 90px rgba(0,0,0,.6)}
   .dm-art{flex:0 0 150px; aspect-ratio:2/3; border-radius:12px; overflow:hidden; background:var(--bg-grid); border:1px solid var(--line); position:relative}
@@ -834,10 +837,8 @@ function showCardDetail(cid){
   $("detailClose").addEventListener("click", () => { ov.hidden = true; });
 }
 document.addEventListener("click", (e) => {
-  const tile = e.target.closest(".tile[data-cid]");
-  if (tile){ showCardDetail(tile.dataset.cid); return; }
-  const tr = e.target.closest("tbody tr[data-cid]");
-  if (tr){ showCardDetail(tr.dataset.cid); }
+  const hit = e.target.closest('.tile[data-cid], .cube-row[data-cid], .dcard[data-cid], tbody tr[data-cid]');
+  if (hit) showCardDetail(hit.dataset.cid);
 });
 
 /* ---------- completion ---------- */
@@ -946,7 +947,7 @@ function renderDecks(){
       const thumb = art
         ? `<div class="dcard-thumb"><img loading="lazy" src="${esc(art)}" alt="${esc(nm)}" onerror="imgFallback(this)"><div class="ph" style="display:none">${esc(nm)}</div></div>`
         : `<div class="dcard-thumb"><div class="ph">${esc(nm)}</div></div>`;
-      return `<div class="dcard${c.split ? " split" : ""}" title="${esc(nm)}">${thumb}<div class="dcard-name">${esc(nm)}</div></div>`;
+      return `<div class="dcard${c.split ? " split" : ""}" data-cid="${esc(c.cid)}" title="${esc(nm)}">${thumb}<div class="dcard-name">${esc(nm)}</div></div>`;
     }).join("");
     const date = d.updated ? new Date(d.updated).toLocaleDateString("en-US", {month:"short", day:"numeric"}) : "";
     const meta = `${d.count} cards`
@@ -1088,7 +1089,7 @@ function renderCubes(){
     const thumb = art
       ? `<span class="cube-thumb"><img loading="lazy" src="${esc(art)}" alt="" onerror="imgFallback(this)"><span class="ph" style="display:none">${esc(nm)}</span></span>`
       : `<span class="cube-thumb"><span class="ph">${esc(nm)}</span></span>`;
-    return `<div class="cube-row">${thumb}<span class="cube-name">${esc(nm)}</span>`
+    return `<div class="cube-row" data-cid="${esc(cid)}">${thumb}<span class="cube-name">${esc(nm)}</span>`
       + `<span class="cube-val ${kind}">${v > 0 ? "+" : ""}${v}</span></div>`;
   };
   $("cubeLeaders").innerHTML = leaders.map(e => row(e, "pos")).join("") || `<div class="cube-empty">none yet</div>`;
@@ -1744,7 +1745,7 @@ function renderBuilderPool(){
     const img = c.art
       ? `<img loading="lazy" src="${esc(c.art)}" alt="${esc(nm)}" onerror="imgFallback(this)"><div class="ph" style="display:none">${esc(nm)}</div>`
       : `<div class="ph">${esc(nm)}</div>`;
-    return `<div class="bcard${owns ? "" : " unowned"}${inDeck.has(c.carddefid) ? " in-deck" : ""}" data-cid="${esc(c.carddefid)}" title="${esc(nm)}${owns ? "" : " (not owned)"}">${img}<div class="cap">${esc(nm)}</div></div>`;
+    return `<div class="bcard${owns ? "" : " unowned"}${inDeck.has(c.carddefid) ? " in-deck" : ""}" data-cid="${esc(c.carddefid)}" title="${esc(nm)}${owns ? "" : " (not owned)"}">${img}<button class="card-info" data-cid="${esc(c.carddefid)}" title="Card details">i</button><div class="cap">${esc(nm)}</div></div>`;
   }).join("") || `<p class="miss-note">No cards match.</p>`;
 }
 function renderBuilderDeck(){
@@ -1758,7 +1759,7 @@ function renderBuilderDeck(){
       const inner = art
         ? `<img loading="lazy" src="${esc(art)}" alt="${esc(nm)}" onerror="imgFallback(this)"><div class="ph" style="display:none">${esc(nm)}</div>`
         : `<div class="ph">${esc(nm)}</div>`;
-      html += `<div class="slot filled${owns ? "" : " unowned"}" data-cid="${esc(id)}" title="${esc(nm)} — click to remove">${inner}</div>`;
+      html += `<div class="slot filled${owns ? "" : " unowned"}" data-cid="${esc(id)}" title="${esc(nm)} — click to remove">${inner}<button class="card-info" data-cid="${esc(id)}" title="Card details">i</button></div>`;
     } else html += `<div class="slot"></div>`;
   }
   slots.innerHTML = html;
@@ -1795,8 +1796,14 @@ function builderToggle(id){
   else { setStatus("Deck is full (12 cards)", "warn"); return; }
   renderBuilderDeck(); renderBuilderPool();
 }
-$("bPool").addEventListener("click", (e) => { const el = e.target.closest(".bcard"); if (el) builderToggle(el.dataset.cid); });
-$("bSlots").addEventListener("click", (e) => { const el = e.target.closest(".slot.filled"); if (el) builderToggle(el.dataset.cid); });
+$("bPool").addEventListener("click", (e) => {
+  const info = e.target.closest(".card-info"); if (info){ showCardDetail(info.dataset.cid); return; }
+  const el = e.target.closest(".bcard"); if (el) builderToggle(el.dataset.cid);
+});
+$("bSlots").addEventListener("click", (e) => {
+  const info = e.target.closest(".card-info"); if (info){ showCardDetail(info.dataset.cid); return; }
+  const el = e.target.closest(".slot.filled"); if (el) builderToggle(el.dataset.cid);
+});
 $("bSearch").addEventListener("input", (e) => { bQuery = e.target.value; renderBuilderPool(); });
 $("bFilters").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-bf]"); if (!btn) return;
