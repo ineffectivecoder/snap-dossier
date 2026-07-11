@@ -85,6 +85,14 @@
   .identity b{color:#fff; letter-spacing:.02em}
   .career{font-family:var(--mono); font-size:12.5px; letter-spacing:.04em; color:var(--ink-dim); margin:10px 0 0}
   .career b{color:var(--cyan)}
+  .identity .dim{color:var(--ink-faint)}
+  .badge8{color:var(--gold); text-shadow:0 0 14px rgba(255,194,61,.4)}
+  .wallet{font-family:var(--mono); font-size:12.5px; letter-spacing:.04em; color:var(--ink-dim); margin:10px 0 0; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 16px}
+  .wallet .w b{font-weight:600}
+  .wallet .w.gold b{color:var(--gold)}
+  .wallet .w.cyan b{color:var(--cyan)}
+  .wallet .w.violet b{color:var(--violet)}
+  .wallet .w-spent{color:var(--ink-faint); letter-spacing:.03em; flex-basis:100%; margin-top:2px}
 
   /* cube impact */
   .cube-cols{display:grid; grid-template-columns:1fr 1fr; gap:28px}
@@ -272,6 +280,7 @@
     <p class="identity" id="identity" hidden></p>
     <div class="readout" id="readout" hidden></div>
     <p class="career" id="career" hidden></p>
+    <p class="wallet" id="wallet" hidden></p>
     <div class="dist" id="dist" hidden>
       <div class="dist-bar" id="distBar"></div>
       <div class="dist-key" id="distKey"></div>
@@ -481,15 +490,50 @@ function extractLevel(json){
   return typeof v === "number" ? v : null;
 }
 
-// ProfileState.json -> career record, snaps, and per-card net cubes.
+// A currency lives at _currencies.<Type>.<Type>. The live balance is TotalAmount,
+// but the game drops that field when it's 0 (only non-zero SpentAmount survives) --
+// so treat a missing TotalAmount as 0, never as "unknown". Gold also splits into
+// Free/Purchased, which we sum as a fallback.
+function readCurrency(currencies, type){
+  const c = currencies && currencies[type] && currencies[type][type];
+  if (!c || typeof c !== "object") return null;
+  const total = (typeof c.TotalAmount === "number") ? c.TotalAmount
+    : (typeof c.FreeGold === "number" || typeof c.PurchasedGold === "number")
+        ? (c.FreeGold || 0) + (c.PurchasedGold || 0)
+        : 0;
+  return { total, spent: (typeof c.SpentAmount === "number") ? c.SpentAmount : null };
+}
+
+// ProfileState.json -> career record, snaps, per-card net cubes, ladder rank, wallet.
 function parseProfile(json){
-  const acc = (json.ServerState && json.ServerState.Account) || {};
+  const server = json.ServerState || {};
+  const acc = server.Account || {};
   const raw = (acc.CardStats && typeof acc.CardStats === "object") ? acc.CardStats : {};
   const cardStats = {};
   for (const k in raw){
     if (k.startsWith("$")) continue;
     if (typeof raw[k] === "number") cardStats[k] = raw[k];
   }
+
+  // ladder rank (RankLog): current / season-high / where the season's soft reset left you
+  const rl = server.RankLog || {};
+  const rank = (rl.Rank != null) ? {
+    rank: rl.Rank,
+    high: (rl.HighWatermarkRank != null) ? rl.HighWatermarkRank
+        : (rl.PersistedHighWatermarkRank != null) ? rl.PersistedHighWatermarkRank : null,
+    start: (rl.RankDetailsAtSeasonStart && rl.RankDetailsAtSeasonStart.Rank != null) ? rl.RankDetailsAtSeasonStart.Rank : null,
+    games: (rl.GamesPlayedInSeason != null) ? rl.GamesPlayedInSeason : null,
+    season: rl.RankedSeasonDefId || null,
+  } : null;
+
+  const cur = (server.Wallet && server.Wallet._currencies) || {};
+  const wallet = {
+    gold:    readCurrency(cur, "Gold"),
+    tokens:  readCurrency(cur, "CollectorsTokens"),
+    credits: readCurrency(cur, "Credits"),
+    wild:    readCurrency(cur, "WildBooster"),
+  };
+
   return {
     name: acc.Name || null,
     tag: acc.Tag != null ? acc.Tag : null,
@@ -499,7 +543,9 @@ function parseProfile(json){
     snaps: acc.Snaps != null ? acc.Snaps : null,
     concedes: acc.Concedes != null ? acc.Concedes : null,
     oppConcedes: acc.OpponentConcedes != null ? acc.OpponentConcedes : null,
-    cardStats,
+    aiGames: acc.AiGamesPlayed != null ? acc.AiGamesPlayed : null,
+    eightCube: !!(json.ClientState && json.ClientState.HasRanked8CubeWin),
+    rank, wallet, cardStats,
   };
 }
 
@@ -652,6 +698,9 @@ function renderProfile(){
   if (currentProfile && currentProfile.name)
     idParts.push(`<b>${esc(currentProfile.name)}</b>${currentProfile.tag != null ? ` #${currentProfile.tag}` : ""}`);
   if (currentLevel != null) idParts.push(`Collection Level ${fmt(currentLevel)}`);
+  const rk = currentProfile && currentProfile.rank;
+  if (rk) idParts.push(`Rank ${fmt(rk.rank)}${(rk.high != null && rk.high > rk.rank) ? ` <span class="dim">peak ${fmt(rk.high)}</span>` : ""}`);
+  if (currentProfile && currentProfile.eightCube) idParts.push(`<span class="badge8">&#9670; 8-cube win</span>`);
   const idEl = $("identity");
   if (currentData && idParts.length){ idEl.hidden = false; idEl.innerHTML = idParts.join(" &middot; "); }
   else idEl.hidden = true;
@@ -664,10 +713,46 @@ function renderProfile(){
     const bits = [`<b>${fmt(c.wins)}\u2013${fmt(c.losses)}\u2013${fmt(c.ties || 0)}</b>`, `${wr}% WR`];
     if (c.snaps != null) bits.push(`${fmt(c.snaps)} snaps`);
     if (c.concedes != null) bits.push(`${fmt(c.concedes)} retreats`);
+    if (c.aiGames != null){
+      // "vs AI" as a share of decided games -- but only show the % when the
+      // counters plausibly overlap (AI games <= total). If they don't, the
+      // ratio would be nonsense, so fall back to the raw count.
+      const tot = (c.wins || 0) + (c.losses || 0) + (c.ties || 0);
+      const pct = (tot > 0 && c.aiGames <= tot) ? Math.round(c.aiGames / tot * 100) : null;
+      bits.push(`${fmt(c.aiGames)} vs AI${pct != null ? ` (${pct}%)` : ""}`);
+    }
+    if (rk && rk.games != null) bits.push(`${fmt(rk.games)} games this season`);
     careerEl.hidden = false; careerEl.innerHTML = bits.join(" &middot; ");
   } else careerEl.hidden = true;
 
+  renderWallet();
   renderCubes();
+}
+
+// Wallet: balances we have (Gold, Tokens; Credits/Wild only when non-zero),
+// plus a lifetime-spent flex from the always-present SpentAmount.
+function renderWallet(){
+  const el = $("wallet"), w = currentProfile && currentProfile.wallet;
+  if (!currentData || !w){ el.hidden = true; return; }
+  const compact = (n) => n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${n}`;
+
+  const bal = [];
+  const push = (cur, label, cls, always) => {
+    if (cur && (always || cur.total > 0)) bal.push(`<span class="w ${cls}"><b>${fmt(cur.total)}</b> ${label}</span>`);
+  };
+  push(w.gold, "Gold", "gold", true);
+  push(w.tokens, "Tokens", "cyan", true);
+  push(w.credits, "Credits", "violet", false);
+  push(w.wild, "Wild Boosters", "violet", false);
+
+  const spent = [];
+  const spend = (cur, label) => { if (cur && cur.spent) spent.push(`${compact(cur.spent)} ${label}`); };
+  spend(w.credits, "credits"); spend(w.tokens, "tokens"); spend(w.gold, "gold");
+
+  if (!bal.length && !spent.length){ el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = bal.join(" &middot; ")
+    + (spent.length ? `<span class="w-spent">lifetime spent: ${spent.join(" &middot; ")}</span>` : "");
 }
 
 function renderCubes(){
