@@ -131,6 +131,28 @@
   .card-actions{display:flex; align-items:center; gap:12px}
   a.tb{text-decoration:none}
 
+  /* card detail overlay */
+  .tile[data-cid]{cursor:pointer}
+  tbody tr[data-cid]{cursor:pointer}
+  tbody tr[data-cid]:hover td{background:var(--bg-grid)}
+  .detail-modal{display:flex; gap:22px; width:min(620px,94vw); background:var(--bg-elev); border:1px solid var(--line); border-radius:16px; padding:22px; box-shadow:0 24px 90px rgba(0,0,0,.6)}
+  .dm-art{flex:0 0 150px; aspect-ratio:2/3; border-radius:12px; overflow:hidden; background:var(--bg-grid); border:1px solid var(--line); position:relative}
+  .dm-art img{width:100%; height:100%; object-fit:cover; display:block}
+  .dm-art .ph{position:absolute; inset:0; display:grid; place-items:center; padding:8px; text-align:center; font-family:var(--mono); font-size:12px; color:var(--ink-dim)}
+  .dm-body{flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:12px}
+  .dm-head{display:flex; align-items:center; gap:10px}
+  .dm-head h3{flex:1 1 auto; margin:0; font-family:var(--display); font-weight:600; font-stretch:condensed; text-transform:uppercase; font-size:24px; letter-spacing:.03em; color:#fff}
+  .dm-cost,.dm-pow{flex:0 0 auto; min-width:30px; height:30px; padding:0 6px; border-radius:50%; display:grid; place-items:center; font-family:var(--display); font-weight:600; font-size:16px; color:var(--bg)}
+  .dm-cost{background:var(--cyan); box-shadow:0 0 14px rgba(34,224,255,.4)}
+  .dm-pow{background:var(--gold); box-shadow:0 0 14px rgba(255,194,61,.4)}
+  .dm-ability{margin:0; font-size:14px; line-height:1.55; color:var(--ink)}
+  .dm-ability .kw{color:var(--cyan); font-weight:600}
+  .dm-flavor{margin:0; font-size:13px; font-style:italic; color:var(--ink-dim)}
+  .dm-meta{display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:auto; padding-top:6px; font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint)}
+  .dm-own{color:var(--cyan)} .dm-miss{color:var(--magenta)}
+  .detail-modal .tb{align-self:flex-start}
+  @media(max-width:520px){ .detail-modal{flex-direction:column} .dm-art{flex-basis:auto; width:160px; margin:0 auto} }
+
   /* tabs + panels */
   .tabs{display:flex; gap:2px; margin:32px 0 0; border-bottom:1px solid var(--line); flex-wrap:wrap}
   .tabs[hidden]{display:none}
@@ -587,6 +609,7 @@ let universe = [];        // slim card list from cards.json
 let liveHandle = null;    // FileSystemFileHandle for one-click re-sync
 let artIndex = new Map(); // carddefid -> art url
 let costIndex = new Map(); // carddefid -> mana cost
+let cardById = new Map(); // carddefid -> full card record (for detail view)
 let view = "table";       // "table" | "gallery"
 let _by = {}, _owned = new Set();  // cached for the completion missing-expanders
 
@@ -759,7 +782,7 @@ function imgFallback(img){
   if (ph) ph.style.display = "grid";
 }
 
-function cardTile({name, art, variants = 0, splits = 0, locked = false}){
+function cardTile({name, art, variants = 0, splits = 0, locked = false, cid = ""}){
   const cls = (splits > 0 && !locked ? "split " : "") + (locked ? "locked" : "");
   const img = art
     ? `<img loading="lazy" src="${esc(art)}" alt="${esc(name)}" onerror="imgFallback(this)">`
@@ -767,8 +790,55 @@ function cardTile({name, art, variants = 0, splits = 0, locked = false}){
     : `<div class="ph">${esc(name)}</div>`;
   const sbadge = (splits > 0 && !locked) ? `<span class="sbadge">\u25C6${splits > 1 ? splits : ""}</span>` : "";
   const vbadge = (variants > 0 && !locked) ? `<span class="vbadge">\u00D7${variants}</span>` : "";
-  return `<div class="tile ${cls}" title="${esc(name)}">${img}${sbadge}${vbadge}<div class="cap">${esc(name)}</div></div>`;
+  return `<div class="tile ${cls}"${cid ? ` data-cid="${esc(cid)}"` : ""} title="${esc(name)}">${img}${sbadge}${vbadge}<div class="cap">${esc(name)}</div></div>`;
 }
+
+// Ability text wraps keywords in <span>…</span>; escape everything, then re-style
+// only those spans (keeps it injection-safe while highlighting On Reveal / Ongoing / etc).
+function renderAbility(txt){
+  if (!txt) return "";
+  return esc(txt).replace(/&lt;span&gt;/g, '<b class="kw">').replace(/&lt;\/span&gt;/g, "</b>");
+}
+// Click any card (gallery tile or table row) -> detail overlay.
+function showCardDetail(cid){
+  const c = cardById.get(cid);
+  let ov = $("detailOverlay");
+  if (!ov){
+    ov = document.createElement("div"); ov.id = "detailOverlay"; ov.className = "card-overlay";
+    ov.innerHTML = `<div class="detail-modal" id="detailModal"></div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener("click", (e) => { if (e.target === ov) ov.hidden = true; });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !ov.hidden) ov.hidden = true; });
+  }
+  const nm = c && c.name ? cleanName(c.name) : prettify(cid);
+  const art = (c && c.art) || artIndex.get(cid);
+  const cost = c && typeof c.cost === "number" ? c.cost : null;
+  const power = c && typeof c.power === "number" ? c.power : null;
+  const owned = (currentData || []).some(r => r.card_def_id === cid);
+  const imgHtml = art
+    ? `<img src="${esc(art)}" alt="${esc(nm)}" onerror="imgFallback(this)"><div class="ph" style="display:none">${esc(nm)}</div>`
+    : `<div class="ph">${esc(nm)}</div>`;
+  $("detailModal").innerHTML =
+    `<div class="dm-art">${imgHtml}</div><div class="dm-body">`
+    + `<div class="dm-head"><h3>${esc(nm)}</h3>`
+      + (cost != null ? `<span class="dm-cost">${cost}</span>` : "")
+      + (power != null ? `<span class="dm-pow">${power}</span>` : "") + `</div>`
+    + (c && c.ability ? `<p class="dm-ability">${renderAbility(c.ability)}</p>` : "")
+    + (c && c.flavor ? `<p class="dm-flavor">${esc(cleanName(c.flavor))}</p>` : "")
+    + `<div class="dm-meta">`
+      + (c && c.source && c.source !== "None" ? `<span>${esc(c.source)}</span>` : "")
+      + (c && c.type ? `<span>${esc(c.type)}</span>` : "")
+      + `<span class="${owned ? "dm-own" : "dm-miss"}">${owned ? "In your collection" : "Not owned"}</span>` + `</div>`
+    + `<button class="tb ghost" id="detailClose">Close</button></div>`;
+  ov.hidden = false;
+  $("detailClose").addEventListener("click", () => { ov.hidden = true; });
+}
+document.addEventListener("click", (e) => {
+  const tile = e.target.closest(".tile[data-cid]");
+  if (tile){ showCardDetail(tile.dataset.cid); return; }
+  const tr = e.target.closest("tbody tr[data-cid]");
+  if (tr){ showCardDetail(tr.dataset.cid); }
+});
 
 /* ---------- completion ---------- */
 function collectibleSeries(cards){
@@ -846,7 +916,7 @@ $("comp").addEventListener("click", e => {
       .filter(c => !_owned.has(c.carddefid))
       .sort((a, b) => a.name.localeCompare(b.name));
     box.innerHTML = `<div class="gallery">`
-      + recs.map(c => cardTile({name: c.name, art: c.art, locked: true})).join("")
+      + recs.map(c => cardTile({name: c.name, art: c.art, locked: true, cid: c.carddefid})).join("")
       + `</div>`;
     box.dataset.filled = "1";
   }
@@ -1118,7 +1188,7 @@ function renderTimeline(){
     return `<div class="tl-col" title="${y}-${String(mo + 1).padStart(2, "0")}: +${n} → ${cumul[i]} cards"><div class="tl-bar" style="height:${h}px"></div>${yr}</div>`;
   }).join("");
   $("tlNewest").innerHTML = [...dated].reverse().slice(0, 10)
-    .map(r => cardTile({ name: r.name, art: artIndex.get(r.card_def_id) })).join("");
+    .map(r => cardTile({ name: r.name, art: artIndex.get(r.card_def_id), cid: r.card_def_id })).join("");
 }
 
 // Booster Bank: cards with the most boosters banked right now (ready to upgrade/split).
@@ -1157,7 +1227,7 @@ function renderGrid(){
     $("gallery").hidden = false;
     $("gallery").innerHTML = rows.map(r => cardTile({
       name: r.name, art: artIndex.get(r.card_def_id),
-      variants: r.variant_count, splits: r.splits,
+      variants: r.variant_count, splits: r.splits, cid: r.card_def_id,
     })).join("");
   } else {
     $("gallery").hidden = true;
@@ -1165,7 +1235,7 @@ function renderGrid(){
     const fmtDate = (ms) => ms ? new Date(ms).toLocaleDateString("en-US", {year:"numeric", month:"short", day:"numeric"}) : "\u2014";
     const cell = (v, cls) => v === 0 ? `<td><span class="zero">0</span></td>` : `<td>${cls ? `<span class="${cls}">${v}</span>` : fmt(v)}</td>`;
     $("tbody").innerHTML = rows.map(r =>
-      `<tr class="${r.splits>0?"split":""}"><td>${esc(r.name)}</td>`
+      `<tr class="${r.splits>0?"split":""}" data-cid="${esc(r.card_def_id)}"><td>${esc(r.name)}</td>`
       + cell(r.variant_count, r.variant_count ? "v-pill" : "")
       + cell(r.boosters) + cell(r.lifetime_boosters)
       + cell(r.splits, r.splits ? "split-pill" : "")
@@ -1622,7 +1692,7 @@ function runMissing(){
   else html += `Missing <b>${missing.length}</b> of ${resolved.length} · own ${have}`;
   html += `</div>`;
   if (missing.length)
-    html += `<div class="gallery">` + missing.map(r => cardTile({ name: prettify(r.id), art: artIndex.get(r.id), locked: true })).join("") + `</div>`;
+    html += `<div class="gallery">` + missing.map(r => cardTile({ name: prettify(r.id), art: artIndex.get(r.id), locked: true, cid: r.id })).join("") + `</div>`;
   if (unknown.length) html += `<p class="miss-note">Unrecognized: ${unknown.slice(0, 20).map(esc).join(", ")}${unknown.length > 20 ? "…" : ""}</p>`;
   out.innerHTML = html;
 }
@@ -1812,10 +1882,12 @@ renderSavedDecks();
       const data = await res.json();
       if (Array.isArray(data)){
         universe = data;
-        artIndex = new Map(); costIndex = new Map();
+        artIndex = new Map(); costIndex = new Map(); cardById = new Map();
         for (const c of universe){
-          if (c.carddefid && c.art) artIndex.set(c.carddefid, c.art);
-          if (c.carddefid && typeof c.cost === "number") costIndex.set(c.carddefid, c.cost);
+          if (!c.carddefid) continue;
+          cardById.set(c.carddefid, c);
+          if (c.art) artIndex.set(c.carddefid, c.art);
+          if (typeof c.cost === "number") costIndex.set(c.carddefid, c.cost);
         }
       }
     }

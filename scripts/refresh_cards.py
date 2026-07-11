@@ -14,7 +14,7 @@ import sys
 import urllib.request
 
 URL = "https://marvelsnapzone.com/getinfo/?searchtype=cards&searchcardstype=true"
-FIELDS = ("carddefid", "name", "source", "source_slug", "status", "type", "art")
+FIELDS = ("carddefid", "name", "source", "source_slug", "status", "type", "art", "ability", "flavor")
 NUM_FIELDS = ("cost", "power")  # integers; kept as-is (0 is valid, not "missing")
 MIN_CARDS = 100  # guard against committing a broken/empty pull
 
