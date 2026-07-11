@@ -394,11 +394,24 @@ function parseDecks(json){
 }
 
 /* ---------- card art tile (shared by gallery + missing strips) ---------- */
+// Themed variants (e.g. cyclops--x-men.webp) 404 on MSZ's CDN. On a failed
+// load, retry with the base card art (cyclops.webp) before the name fallback.
+function imgFallback(img){
+  const base = img.src.replace(/--[a-z0-9-]+\.webp/i, ".webp");
+  if (base !== img.src && !img.dataset.retried){
+    img.dataset.retried = "1";
+    img.src = base;
+    return;
+  }
+  img.style.display = "none";
+  const ph = img.parentElement && img.parentElement.querySelector(".ph");
+  if (ph) ph.style.display = "grid";
+}
+
 function cardTile({name, art, variants = 0, splits = 0, locked = false}){
   const cls = (splits > 0 && !locked ? "split " : "") + (locked ? "locked" : "");
   const img = art
-    ? `<img loading="lazy" src="${esc(art)}" alt="${esc(name)}" `
-      + `onerror="this.style.display='none';this.parentElement.querySelector('.ph').style.display='grid'">`
+    ? `<img loading="lazy" src="${esc(art)}" alt="${esc(name)}" onerror="imgFallback(this)">`
       + `<div class="ph" style="display:none">${esc(name)}</div>`
     : `<div class="ph">${esc(name)}</div>`;
   const sbadge = (splits > 0 && !locked) ? `<span class="sbadge">\u25C6${splits > 1 ? splits : ""}</span>` : "";
@@ -509,7 +522,7 @@ function renderDecks(){
     const strip = d.cards.map(c => {
       const nm = prettify(c.cid), art = artIndex.get(c.cid);
       const inner = art
-        ? `<img loading="lazy" src="${esc(art)}" alt="${esc(nm)}" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"><div class="ph" style="display:none">${esc(nm)}</div>`
+        ? `<img loading="lazy" src="${esc(art)}" alt="${esc(nm)}" onerror="imgFallback(this)"><div class="ph" style="display:none">${esc(nm)}</div>`
         : `<div class="ph">${esc(nm)}</div>`;
       return `<div class="mini${c.split ? " split" : ""}" title="${esc(nm)}">${inner}</div>`;
     }).join("");
