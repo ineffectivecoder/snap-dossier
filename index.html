@@ -414,7 +414,7 @@
       <button id="btnSync" class="tb primary" title="Read the freshest CollectionState.json">&#8635; Sync</button>
       <button id="btnProfile" class="tb ghost" disabled title="Add W-L record + cube stats from ProfileState.json">+ Profile stats</button>
       <button id="btnCard" class="tb" disabled title="Generate a shareable stats card image">&#9670; Share card</button>
-      <button id="btnCopy" class="tb ghost" disabled title="Copy the collection as JSON to the clipboard">Export</button>
+      <button id="btnCopy" class="tb ghost" disabled title="Copy the collection as JSON to the clipboard">Export to Clipboard</button>
       <button id="btnCsv" class="tb ghost" disabled>CSV</button>
       <button id="btnJson" class="tb ghost" disabled>JSON</button>
       <button id="btnReset" class="tb ghost" disabled title="Forget the loaded collection">Reset</button>
@@ -431,6 +431,11 @@
         <button id="btnCopyPath" class="tb primary" type="button">Copy path</button>
       </div>
       <p class="fineprint"><code>%USERPROFILE%</code> fills in your username automatically. The file is read in your browser and saved on this device &mdash; nothing is uploaded. After the first time, Sync is one click.</p>
+      <p>For win/loss record and cube stats, add <b>ProfileState.json</b> too. It sits in the same <code>nvprod</code> folder &mdash; load it with <b>+ Profile stats</b>.</p>
+      <div class="pathbox">
+        <code id="pathProfile">%USERPROFILE%\AppData\LocalLow\Second Dinner\SNAP\Standalone\States\nvprod\ProfileState.json</code>
+        <button id="btnCopyPathProfile" class="tb primary" type="button">Copy path</button>
+      </div>
     </div>
 
   </header>
@@ -1401,18 +1406,22 @@ $("profileInput").addEventListener("change", e => {
   rd.readAsText(f);
 });
 
-$("btnCopyPath").addEventListener("click", async () => {
-  const p = $("pathText").textContent.trim();
-  const b = $("btnCopyPath");
-  const flash = () => { const t = b.textContent; b.textContent = "Copied!"; setTimeout(() => b.textContent = t, 1400); };
-  try{ await navigator.clipboard.writeText(p); flash(); }
-  catch(e){
-    const ta = document.createElement("textarea"); ta.value = p; ta.style.position = "fixed"; ta.style.opacity = "0";
-    document.body.appendChild(ta); ta.select();
-    try{ document.execCommand("copy"); flash(); }catch(_){}
-    ta.remove();
-  }
-});
+function wireCopyPath(btnId, codeId){
+  $(btnId).addEventListener("click", async () => {
+    const p = $(codeId).textContent.trim();
+    const b = $(btnId);
+    const flash = () => { const t = b.textContent; b.textContent = "Copied!"; setTimeout(() => b.textContent = t, 1400); };
+    try{ await navigator.clipboard.writeText(p); flash(); }
+    catch(e){
+      const ta = document.createElement("textarea"); ta.value = p; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand("copy"); flash(); }catch(_){}
+      ta.remove();
+    }
+  });
+}
+wireCopyPath("btnCopyPath", "pathText");
+wireCopyPath("btnCopyPathProfile", "pathProfile");
 
 $("btnReset").addEventListener("click", async () => {
   currentData = null; currentDecks = []; currentLevel = null; currentProfile = null;
