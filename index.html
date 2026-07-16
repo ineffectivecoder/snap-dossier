@@ -2,6 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- Backs the "nothing leaves your machine" promise at the browser level: connect-src
+     and img-src give injected script nowhere to send your collection, even if some
+     future escaping bug lets one run. 'unsafe-inline' stays because the page is one
+     inline script block plus inline style= attrs; dropping it needs a hash + refactor.
+     img-src: marvelsnapzone = card art, data: = the share-card canvas preview.
+     The art origin is pinned to whatever refresh_cards.py commits into cards.json --
+     ART_DOMAINS in that script guards the pair, so widen both together or art
+     silently degrades to name placeholders. -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' https://marvelsnapzone.com https://*.marvelsnapzone.com data: blob:;
+  connect-src 'self';
+  base-uri 'none';
+  form-action 'none';
+  object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Marvel Snap - Collection Dossier</title>
 <style>
