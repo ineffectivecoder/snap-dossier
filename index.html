@@ -675,7 +675,9 @@ let view = "table";       // "table" | "gallery"
 let _by = {}, _owned = new Set();  // cached for the completion missing-expanders
 
 const $ = (id) => document.getElementById(id);
-const fmt = (n) => n.toLocaleString("en-US");
+// Number() first: a bare string's toLocaleString returns it verbatim, which would
+// carry markup straight into the innerHTML that every fmt() caller feeds.
+const fmt = (n) => Number(n).toLocaleString("en-US");
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function setStatus(msg, kind){ const s = $("status"); s.textContent = msg || ""; s.className = "tb-status" + (kind ? " " + kind : ""); }
 
@@ -783,6 +785,10 @@ function readCurrency(currencies, type){
   return { total, spent: (typeof c.SpentAmount === "number") ? c.SpentAmount : null };
 }
 
+// Profile counters land in innerHTML via fmt(), which passes non-numbers through
+// untouched -- so keep them to real numbers here rather than trusting the file.
+const num = (v) => (typeof v === "number" && isFinite(v)) ? v : null;
+
 // ProfileState.json -> career record, snaps, per-card net cubes, ladder rank, wallet.
 function parseProfile(json){
   const server = json.ServerState || {};
@@ -796,12 +802,12 @@ function parseProfile(json){
 
   // ladder rank (RankLog): current / season-high / where the season's soft reset left you
   const rl = server.RankLog || {};
-  const rank = (rl.Rank != null) ? {
-    rank: rl.Rank,
-    high: (rl.HighWatermarkRank != null) ? rl.HighWatermarkRank
-        : (rl.PersistedHighWatermarkRank != null) ? rl.PersistedHighWatermarkRank : null,
-    start: (rl.RankDetailsAtSeasonStart && rl.RankDetailsAtSeasonStart.Rank != null) ? rl.RankDetailsAtSeasonStart.Rank : null,
-    games: (rl.GamesPlayedInSeason != null) ? rl.GamesPlayedInSeason : null,
+  const rank = (num(rl.Rank) != null) ? {
+    rank: num(rl.Rank),
+    high: (num(rl.HighWatermarkRank) != null) ? num(rl.HighWatermarkRank)
+        : num(rl.PersistedHighWatermarkRank),
+    start: (rl.RankDetailsAtSeasonStart) ? num(rl.RankDetailsAtSeasonStart.Rank) : null,
+    games: num(rl.GamesPlayedInSeason),
     season: rl.RankedSeasonDefId || null,
   } : null;
 
@@ -816,13 +822,13 @@ function parseProfile(json){
   return {
     name: acc.Name || null,
     tag: acc.Tag != null ? acc.Tag : null,
-    wins: acc.Wins != null ? acc.Wins : null,
-    losses: acc.Losses != null ? acc.Losses : null,
-    ties: acc.Ties != null ? acc.Ties : null,
-    snaps: acc.Snaps != null ? acc.Snaps : null,
-    concedes: acc.Concedes != null ? acc.Concedes : null,
-    oppConcedes: acc.OpponentConcedes != null ? acc.OpponentConcedes : null,
-    aiGames: acc.AiGamesPlayed != null ? acc.AiGamesPlayed : null,
+    wins: num(acc.Wins),
+    losses: num(acc.Losses),
+    ties: num(acc.Ties),
+    snaps: num(acc.Snaps),
+    concedes: num(acc.Concedes),
+    oppConcedes: num(acc.OpponentConcedes),
+    aiGames: num(acc.AiGamesPlayed),
     eightCube: !!(json.ClientState && json.ClientState.HasRanked8CubeWin),
     rank, wallet, cardStats,
   };
@@ -1044,7 +1050,7 @@ function renderProfile(){
   // identity line: player name (if profile) + collection level (from collection)
   const idParts = [];
   if (currentProfile && currentProfile.name)
-    idParts.push(`<b>${esc(currentProfile.name)}</b>${currentProfile.tag != null ? ` #${currentProfile.tag}` : ""}`);
+    idParts.push(`<b>${esc(currentProfile.name)}</b>${currentProfile.tag != null ? ` #${esc(currentProfile.tag)}` : ""}`);
   if (currentLevel != null) idParts.push(`Collection Level ${fmt(currentLevel)}`);
   const rk = currentProfile && currentProfile.rank;
   if (rk){
