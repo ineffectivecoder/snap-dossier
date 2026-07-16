@@ -75,7 +75,7 @@
   .tb-status{font-family:var(--mono); font-size:12px; color:var(--ink-faint); letter-spacing:.03em; margin-left:2px}
   .tb-status.ok{color:var(--cyan)} .tb-status.warn{color:var(--gold)}
   .tb-menu{position:relative; display:inline-block}
-  .tb-menu-list{position:absolute; top:calc(100% + 6px); left:0; z-index:30; min-width:210px; display:flex; flex-direction:column; gap:2px; padding:6px; background:var(--bg-elev); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 34px rgba(0,0,0,.45)}
+  .tb-menu-list{position:fixed; z-index:60; min-width:210px; display:flex; flex-direction:column; gap:2px; padding:6px; background:var(--bg-elev); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 34px rgba(0,0,0,.45)}
   .tb-menu-list[hidden]{display:none}
   .tb-menu-list button{font-family:var(--mono); font-size:12px; letter-spacing:.05em; text-transform:uppercase; text-align:left; background:transparent; color:var(--ink-dim); border:0; padding:9px 11px; border-radius:7px; cursor:pointer; white-space:nowrap; transition:.12s}
   .tb-menu-list button:hover{background:var(--bg-grid); color:var(--cyan)}
@@ -1647,14 +1647,22 @@ $("btnCard").addEventListener("click", () => {
 });
 /* ---------- export menu ---------- */
 function closeExportMenu(){ $("exportList").hidden = true; $("btnExport").setAttribute("aria-expanded", "false"); }
+// Positioned as fixed so it escapes the masthead's overflow:hidden (which clips it otherwise).
 $("btnExport").addEventListener("click", (e) => {
   e.stopPropagation();
-  const open = !$("exportList").hidden;
-  $("exportList").hidden = open;
-  $("btnExport").setAttribute("aria-expanded", String(!open));
+  const list = $("exportList");
+  if (!list.hidden){ closeExportMenu(); return; }
+  list.hidden = false;                       // unhide first so we can measure it
+  const r = $("btnExport").getBoundingClientRect();
+  const vw = document.documentElement.clientWidth;
+  const left = Math.max(8, Math.min(r.left, vw - 8 - list.offsetWidth));
+  list.style.top = (r.bottom + 6) + "px";
+  list.style.left = left + "px";
+  $("btnExport").setAttribute("aria-expanded", "true");
 });
-document.addEventListener("click", (e) => { if (!e.target.closest("#exportMenu")) closeExportMenu(); });
+document.addEventListener("click", (e) => { if (!e.target.closest("#exportMenu") && !e.target.closest("#exportList")) closeExportMenu(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeExportMenu(); });
+window.addEventListener("scroll", () => { if (!$("exportList").hidden) closeExportMenu(); }, true);
 $("exportList").addEventListener("click", () => closeExportMenu());
 
 $("btnCopy").addEventListener("click", async () => {
