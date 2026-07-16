@@ -74,6 +74,12 @@
   .tb[disabled]{opacity:.4; cursor:not-allowed}
   .tb-status{font-family:var(--mono); font-size:12px; color:var(--ink-faint); letter-spacing:.03em; margin-left:2px}
   .tb-status.ok{color:var(--cyan)} .tb-status.warn{color:var(--gold)}
+  .tb-menu{position:relative; display:inline-block}
+  .tb-menu-list{position:absolute; top:calc(100% + 6px); left:0; z-index:30; min-width:210px; display:flex; flex-direction:column; gap:2px; padding:6px; background:var(--bg-elev); border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 34px rgba(0,0,0,.45)}
+  .tb-menu-list[hidden]{display:none}
+  .tb-menu-list button{font-family:var(--mono); font-size:12px; letter-spacing:.05em; text-transform:uppercase; text-align:left; background:transparent; color:var(--ink-dim); border:0; padding:9px 11px; border-radius:7px; cursor:pointer; white-space:nowrap; transition:.12s}
+  .tb-menu-list button:hover{background:var(--bg-grid); color:var(--cyan)}
+  .tb-menu-list button:focus-visible{outline:2px solid var(--cyan); outline-offset:-2px}
 
   /* empty state */
   .empty{margin:40px 0 8px; padding:34px; border:1px dashed var(--line); border-radius:14px; background:var(--bg-elev); text-align:center}
@@ -85,6 +91,12 @@
   .pathbox button{flex:0 0 auto; white-space:nowrap}
   .empty .fineprint{color:var(--ink-faint); font-size:12px}
   .empty .fineprint code{color:var(--ink-dim)}
+  .filestep{margin:20px auto; max-width:60ch; text-align:left; padding:14px 16px; border:1px solid var(--line-soft); border-radius:12px; background:var(--bg-grid)}
+  .filestep-head{font-family:var(--mono); font-size:13px; color:var(--ink)}
+  .filestep-head b{color:var(--cyan)}
+  .filestep-head span{color:var(--ink-faint); font-size:12px}
+  .filestep .pathbox{margin:12px auto 8px}
+  .filestep .fineprint{margin:0}
 
   .readout{display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 28px; margin:34px 0 14px}
   .stat{display:flex; align-items:baseline; gap:12px}
@@ -368,12 +380,13 @@
   .tile.locked img, .tile.locked .ph{filter:grayscale(1) brightness(.42)}
   .tile.locked::after{content:"\1F512"; position:absolute; inset:0; display:grid; place-items:center; font-size:20px; opacity:.7}
 
-  /* completion missing expander */
+  /* completion owned/missing expanders */
   .comp-row .comp-more{grid-column:1 / -1; margin-top:2px}
+  .comp-more-btns{display:flex; gap:18px; flex-wrap:wrap}
   .comp-more button{font-family:var(--mono); font-size:11px; letter-spacing:.05em; text-transform:uppercase; background:transparent; color:var(--ink-faint); border:0; padding:4px 0; cursor:pointer}
   .comp-more button:hover{color:var(--cyan)}
-  .comp-missing{margin-top:10px}
-  .comp-missing[hidden]{display:none}
+  .comp-cards{margin-top:10px}
+  .comp-cards[hidden]{display:none}
 
   footer{margin-top:64px; padding-top:20px; border-top:1px solid var(--line); font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); letter-spacing:.03em}
   .foot-row{display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px}
@@ -411,12 +424,17 @@
     <p class="sub">Reads your local Marvel Snap files in the browser &mdash; collection, decks, rank and cube stats. Nothing leaves your machine.</p>
 
     <div class="toolbar">
-      <button id="btnSync" class="tb primary" title="Read the freshest CollectionState.json">&#8635; Sync</button>
+      <button id="btnSync" class="tb primary" title="Read the freshest CollectionState.json (shortcut: S)">&#8635; Sync</button>
       <button id="btnProfile" class="tb ghost" disabled title="Add W-L record + cube stats from ProfileState.json">+ Profile stats</button>
       <button id="btnCard" class="tb" disabled title="Generate a shareable stats card image">&#9670; Share card</button>
-      <button id="btnCopy" class="tb ghost" disabled title="Copy the collection as JSON to the clipboard">Export Collection to Clipboard</button>
-      <button id="btnCsv" class="tb ghost" disabled>CSV</button>
-      <button id="btnJson" class="tb ghost" disabled>JSON</button>
+      <div class="tb-menu" id="exportMenu">
+        <button id="btnExport" class="tb ghost" disabled aria-haspopup="true" aria-expanded="false" title="Export your collection">Export &#9662;</button>
+        <div class="tb-menu-list" id="exportList" hidden>
+          <button id="btnCopy" type="button">Collection to clipboard</button>
+          <button id="btnCsv" type="button">Collection as CSV</button>
+          <button id="btnJson" type="button">Collection as JSON</button>
+        </div>
+      </div>
       <button id="btnReset" class="tb ghost" disabled title="Forget the loaded collection">Reset</button>
       <span id="status" class="tb-status"></span>
     </div>
@@ -425,17 +443,27 @@
 
     <div class="empty" id="empty">
       <h3>Load your collection</h3>
-      <p>Marvel Snap keeps your collection in a hidden Windows folder. Skip the hunt: copy the path below, hit <b>Sync</b>, and paste it into the file picker's <b>File name</b> box, then Open.</p>
-      <div class="pathbox">
-        <code id="pathText">%USERPROFILE%\AppData\LocalLow\Second Dinner\SNAP\Standalone\States\nvprod\CollectionState.json</code>
-        <button id="btnCopyPath" class="tb primary" type="button">Copy path</button>
+      <p>Marvel Snap keeps these files in a hidden Windows folder. Skip the hunt: copy a path below, then paste it into the file picker's <b>File name</b> box and hit Open. <code>%USERPROFILE%</code> fills in your username automatically.</p>
+
+      <div class="filestep">
+        <div class="filestep-head"><b>CollectionState.json</b> <span>required &mdash; cards, splits, boosters, decks</span></div>
+        <div class="pathbox">
+          <code id="pathText">%USERPROFILE%\AppData\LocalLow\Second Dinner\SNAP\Standalone\States\nvprod\CollectionState.json</code>
+          <button id="btnCopyPath" class="tb primary" type="button">Copy path</button>
+        </div>
+        <p class="fineprint">Load with <b>&#8635; Sync</b>.</p>
       </div>
-      <p class="fineprint"><code>%USERPROFILE%</code> fills in your username automatically. The file is read in your browser and saved on this device &mdash; nothing is uploaded. After the first time, Sync is one click.</p>
-      <p>For win/loss record and cube stats, add <b>ProfileState.json</b> too. It sits in the same <code>nvprod</code> folder &mdash; load it with <b>+ Profile stats</b>.</p>
-      <div class="pathbox">
-        <code id="pathProfile">%USERPROFILE%\AppData\LocalLow\Second Dinner\SNAP\Standalone\States\nvprod\ProfileState.json</code>
-        <button id="btnCopyPathProfile" class="tb primary" type="button">Copy path</button>
+
+      <div class="filestep">
+        <div class="filestep-head"><b>ProfileState.json</b> <span>optional &mdash; win/loss record + cube stats</span></div>
+        <div class="pathbox">
+          <code id="pathProfile">%USERPROFILE%\AppData\LocalLow\Second Dinner\SNAP\Standalone\States\nvprod\ProfileState.json</code>
+          <button id="btnCopyPathProfile" class="tb primary" type="button">Copy path</button>
+        </div>
+        <p class="fineprint">Same <code>nvprod</code> folder. Load with <b>+ Profile stats</b>.</p>
       </div>
+
+      <p class="fineprint">Files are read in your browser and saved on this device &mdash; nothing is uploaded. After the first time, Sync is one click.</p>
     </div>
 
   </header>
@@ -920,12 +948,17 @@ function renderCompletion(){
     const total = recs.length, miss = total - have, done = have === total;
     if (miss > 0 && (!closest || miss < closest.miss)) closest = { series: s, miss, recs };
     const pctv = total ? have / total * 100 : 0;
+    const moreBtns = [];
+    if (have > 0) moreBtns.push(`<button data-series="${esc(s)}" data-kind="owned" aria-expanded="false">\u25B8 show ${have} owned</button>`);
+    if (miss > 0) moreBtns.push(`<button data-series="${esc(s)}" data-kind="missing" aria-expanded="false">\u25B8 show ${miss} missing</button>`);
     html += `<div class="comp-row">`
       + `<span class="comp-label">${esc(s)}</span>`
       + `<span class="comp-track"><span class="comp-fill${done ? " done" : ""}" style="width:${pctv.toFixed(1)}%"></span></span>`
       + `<span class="comp-val"><b class="${done ? "pdone" : ""}">${pctFmt(pctv)}%</b> <span class="miss">${have}/${total}</span></span>`
-      + (miss > 0
-          ? `<div class="comp-more"><button data-series="${esc(s)}" aria-expanded="false">\u25B8 show ${miss} missing</button><div class="comp-missing" hidden></div></div>`
+      + (moreBtns.length
+          ? `<div class="comp-more"><span class="comp-more-btns">${moreBtns.join("")}</span>`
+            + `<div class="comp-cards" data-kind="owned" hidden></div>`
+            + `<div class="comp-cards" data-kind="missing" hidden></div></div>`
           : "")
       + `</div>`;
   }
@@ -948,10 +981,11 @@ function renderCompletion(){
   $("compMeta").textContent = `${th}/${tot} released cards \u00b7 ${tot-th} missing`;
 }
 
-// Lazy-reveal missing card art per series.
+// Lazy-reveal owned / missing card art per series.
 $("comp").addEventListener("click", e => {
   const btn = e.target.closest(".comp-more button"); if (!btn) return;
-  const box = btn.nextElementSibling;
+  const kind = btn.dataset.kind;   // "owned" | "missing"
+  const box = btn.closest(".comp-more").querySelector(`.comp-cards[data-kind="${kind}"]`);
   const open = btn.getAttribute("aria-expanded") === "true";
   if (open){
     box.hidden = true; btn.setAttribute("aria-expanded", "false");
@@ -960,10 +994,10 @@ $("comp").addEventListener("click", e => {
   }
   if (!box.dataset.filled){
     const recs = (_by[btn.dataset.series] || [])
-      .filter(c => !_owned.has(c.carddefid))
+      .filter(c => kind === "owned" ? _owned.has(c.carddefid) : !_owned.has(c.carddefid))
       .sort((a, b) => a.name.localeCompare(b.name));
     box.innerHTML = `<div class="gallery">`
-      + recs.map(c => cardTile({name: c.name, art: c.art, locked: true, cid: c.carddefid})).join("")
+      + recs.map(c => cardTile({name: c.name, art: c.art, locked: kind === "missing", cid: c.carddefid})).join("")
       + `</div>`;
     box.dataset.filled = "1";
   }
@@ -1150,7 +1184,7 @@ function setLoaded(has){
   $("tabs").hidden = !has;
   $("tabWrap").hidden = !has;
   ["readout","dist","timeline","history","bank","infinity","dormant","grid"].forEach(id => $(id).hidden = !has);
-  ["btnCard","btnCopy","btnCsv","btnJson","btnReset","btnProfile"].forEach(id => $(id).disabled = !has);
+  ["btnCard","btnExport","btnReset","btnProfile"].forEach(id => $(id).disabled = !has);
 }
 
 function renderAll(){
@@ -1355,6 +1389,14 @@ $("btnSync").addEventListener("click", async () => {
     if (err && err.name === "AbortError") setStatus("");
     else setStatus("Sync failed: " + (err && err.message || err), "warn");
   }
+});
+// Keyboard shortcut: press S to Sync (ignored while typing in a field).
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "s" && e.key !== "S") return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target;
+  if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+  e.preventDefault(); $("btnSync").click();
 });
 $("fileInput").addEventListener("change", e => {
   const f = e.target.files[0]; if (!f) return;
@@ -1603,6 +1645,18 @@ $("btnCard").addEventListener("click", () => {
     if (msg){ msg.textContent = "clipboard blocked — use Download"; msg.className = "tb-status warn"; }
   }, "image/png");
 });
+/* ---------- export menu ---------- */
+function closeExportMenu(){ $("exportList").hidden = true; $("btnExport").setAttribute("aria-expanded", "false"); }
+$("btnExport").addEventListener("click", (e) => {
+  e.stopPropagation();
+  const open = !$("exportList").hidden;
+  $("exportList").hidden = open;
+  $("btnExport").setAttribute("aria-expanded", String(!open));
+});
+document.addEventListener("click", (e) => { if (!e.target.closest("#exportMenu")) closeExportMenu(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeExportMenu(); });
+$("exportList").addEventListener("click", () => closeExportMenu());
+
 $("btnCopy").addEventListener("click", async () => {
   if (!currentData) return;
   const text = JSON.stringify(currentData);
