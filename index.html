@@ -463,7 +463,7 @@
 
     <div class="empty" id="empty">
       <h3>Load your collection</h3>
-      <p>These files live in a Windows folder. Copy a path below, paste it into the file picker's <b>File name</b> box, and click Open. <code>%USERPROFILE%</code> stands in for your username.</p>
+      <p>This file lives in a Windows folder. Copy the path below, paste it into the file picker's <b>File name</b> box, and click Open. <code>%USERPROFILE%</code> stands in for your username.</p>
 
       <div class="filestep">
         <div class="filestep-head"><b>CollectionState.json</b> <span>required: cards, splits, boosters, decks</span></div>
@@ -474,16 +474,7 @@
         <p class="fineprint">Load with <b>&#8635; Sync</b>.</p>
       </div>
 
-      <div class="filestep">
-        <div class="filestep-head"><b>ProfileState.json</b> <span>optional: win/loss record + cube stats</span></div>
-        <div class="pathbox">
-          <code id="pathProfile">%USERPROFILE%\AppData\LocalLow\Second Dinner\SNAP\Standalone\States\nvprod\ProfileState.json</code>
-          <button id="btnCopyPathProfile" class="tb primary" type="button">Copy path</button>
-        </div>
-        <p class="fineprint">Same <code>nvprod</code> folder. Load with <b>+ Profile stats</b>.</p>
-      </div>
-
-      <p class="fineprint">Files are read in your browser and saved on this device. Nothing is uploaded. After the first time, Sync is one click.</p>
+      <p class="fineprint">Read in your browser and saved on this device. Nothing is uploaded. After the first time, Sync is one click.</p>
     </div>
 
   </header>
@@ -502,6 +493,17 @@
     <div class="rankmeter" id="rankMeter" hidden></div>
     <p class="wallet" id="wallet" hidden></p>
     <p class="career" id="career" hidden></p>
+
+  <!-- Shown once the collection is in but no profile yet: that is the only point where
+       "+ Profile stats" is enabled, so it is the only point the path is useful. -->
+  <div class="filestep" id="profilePrompt" hidden>
+    <div class="filestep-head"><b>ProfileState.json</b> <span>optional: win/loss record, ladder rank, wallet, cube stats</span></div>
+    <div class="pathbox">
+      <code id="pathProfile">%USERPROFILE%\AppData\LocalLow\Second Dinner\SNAP\Standalone\States\nvprod\ProfileState.json</code>
+      <button id="btnCopyPathProfile" class="tb primary" type="button">Copy path</button>
+    </div>
+    <p class="fineprint">Same <code>nvprod</code> folder as your collection. Copy the path, click <b>+ Profile stats</b>, and paste it into the picker's <b>File name</b> box.</p>
+  </div>
 
   <section id="cubes" hidden>
     <div class="sec-head"><h2>Cube Impact</h2><p id="cubeMeta"></p></div>
@@ -1068,6 +1070,10 @@ function renderDecks(){
 
 /* ---------- profile (identity + career + cubes) ---------- */
 function renderProfile(){
+  // The ProfileState path only helps between "collection synced" and "profile loaded" --
+  // before that the button is disabled, after it there is nothing left to load.
+  $("profilePrompt").hidden = !currentData || !!currentProfile;
+
   // identity line: player name (if profile) + collection level (from collection)
   const idParts = [];
   if (currentProfile && currentProfile.name)
