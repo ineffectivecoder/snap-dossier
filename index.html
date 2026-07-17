@@ -441,7 +441,7 @@
   <header class="mast">
     <p class="eyebrow" id="eyebrow">Collection Dossier</p>
     <h1 class="title"><span class="marvel">Marvel</span> <span class="snap">Snap</span></h1>
-    <p class="sub">Reads your local Marvel Snap files in the browser &mdash; collection, decks, rank and cube stats. Nothing leaves your machine.</p>
+    <p class="sub">Reads your local Marvel Snap files in the browser: collection, decks, rank and cube stats. Nothing leaves your machine.</p>
 
     <div class="toolbar">
       <button id="btnSync" class="tb primary" title="Read the freshest CollectionState.json (shortcut: S)">&#8635; Sync</button>
@@ -466,7 +466,7 @@
       <p>These files live in a Windows folder. Copy a path below, paste it into the file picker's <b>File name</b> box, and click Open. <code>%USERPROFILE%</code> stands in for your username.</p>
 
       <div class="filestep">
-        <div class="filestep-head"><b>CollectionState.json</b> <span>required &mdash; cards, splits, boosters, decks</span></div>
+        <div class="filestep-head"><b>CollectionState.json</b> <span>required: cards, splits, boosters, decks</span></div>
         <div class="pathbox">
           <code id="pathText">%USERPROFILE%\AppData\LocalLow\Second Dinner\SNAP\Standalone\States\nvprod\CollectionState.json</code>
           <button id="btnCopyPath" class="tb primary" type="button">Copy path</button>
@@ -475,7 +475,7 @@
       </div>
 
       <div class="filestep">
-        <div class="filestep-head"><b>ProfileState.json</b> <span>optional &mdash; win/loss record + cube stats</span></div>
+        <div class="filestep-head"><b>ProfileState.json</b> <span>optional: win/loss record + cube stats</span></div>
         <div class="pathbox">
           <code id="pathProfile">%USERPROFILE%\AppData\LocalLow\Second Dinner\SNAP\Standalone\States\nvprod\ProfileState.json</code>
           <button id="btnCopyPathProfile" class="tb primary" type="button">Copy path</button>
@@ -483,7 +483,7 @@
         <p class="fineprint">Same <code>nvprod</code> folder. Load with <b>+ Profile stats</b>.</p>
       </div>
 
-      <p class="fineprint">Files are read in your browser and saved on this device &mdash; nothing is uploaded. After the first time, Sync is one click.</p>
+      <p class="fineprint">Files are read in your browser and saved on this device. Nothing is uploaded. After the first time, Sync is one click.</p>
     </div>
 
   </header>
@@ -532,7 +532,7 @@
   </section>
 
   <section id="history" hidden>
-    <div class="sec-head"><h2>Booster History</h2><p>Top 15 by lifetime boosters &mdash; where the hours went</p></div>
+    <div class="sec-head"><h2>Booster History</h2><p>Top 15 by lifetime boosters: where the hours went</p></div>
     <div class="meters" id="meters"></div>
   </section>
 
@@ -660,11 +660,11 @@
       <div class="privacy-body">
         <p>Everything runs in your browser. This page reads up to two files that <em>you</em> pick from your own machine:</p>
         <ul>
-          <li><b>CollectionState.json</b> &mdash; your cards, variants, splits, boosters, decks, and collection level.</li>
-          <li><b>ProfileState.json</b> (optional) &mdash; your handle, win/loss record, snap count, ladder rank, wallet balances, and per-card cube totals.</li>
+          <li><b>CollectionState.json</b>: your cards, variants, splits, boosters, decks, and collection level.</li>
+          <li><b>ProfileState.json</b> (optional): your handle, win/loss record, snap count, ladder rank, wallet balances, and per-card cube totals.</li>
         </ul>
-        <p>From those files it keeps <b>only what you see on this page</b>. It never reads account IDs, email or login info, auth tokens, or the hidden per-card instance IDs &mdash; even though those sit in the same files.</p>
-        <p>Nothing is uploaded. There is <b>no server, no account, no analytics, no tracking</b>. Your data is saved only in this browser's local storage, and <b>Reset</b> erases it. The card list ships with this site. Card art loads from <a href="https://marvelsnapzone.com" target="_blank" rel="noopener">MarvelSnapZone</a>: those requests carry no collection data, but their server sees your IP and which art your browser asks for &mdash; and that reflects which cards you own.</p>
+        <p>From those files it keeps <b>only what you see on this page</b>. It never reads account IDs, email or login info, auth tokens, or the hidden per-card instance IDs, even though those sit in the same files.</p>
+        <p>Nothing is uploaded. There is <b>no server, no account, no analytics, no tracking</b>. Your data is saved only in this browser's local storage, and <b>Reset</b> erases it. The card list ships with this site. Card art loads from <a href="https://marvelsnapzone.com" target="_blank" rel="noopener">MarvelSnapZone</a>: those requests carry no collection data, but their server sees your IP and which art your browser asks for, and that reflects which cards you own.</p>
       </div>
     </details>
     <div class="foot-row">
@@ -999,7 +999,7 @@ function renderCompletion(){
   if (closest){
     const mc = closest.recs.filter(c => !owned.has(c.carddefid)).sort((a, b) => a.name.localeCompare(b.name));
     const shown = mc.slice(0, 24);
-    callout = `<div class="comp-focus"><div class="cf-head">Closest to finish: <b>${esc(closest.series)}</b> \u2014 ${closest.miss} card${closest.miss === 1 ? "" : "s"} to go</div>`
+    callout = `<div class="comp-focus"><div class="cf-head">Closest to finish: <b>${esc(closest.series)}</b>, ${closest.miss} card${closest.miss === 1 ? "" : "s"} to go</div>`
       + `<div class="gallery">` + shown.map(c => cardTile({ name: c.name, art: c.art, locked: true, cid: c.carddefid })).join("") + `</div>`
       + (mc.length > shown.length ? `<div class="cf-more">+${mc.length - shown.length} more below</div>` : "")
       + `</div>`;
@@ -1129,7 +1129,7 @@ function renderRank(){
 
   const MAX = 100, clamp = (v) => Math.max(0, Math.min(MAX, v)), pos = (v) => (clamp(v) / MAX * 100).toFixed(1);
   const tier = rankTier(rk.rank) || "", nxt = nextTier(rk.rank);
-  const goal = (rk.rank >= MAX) ? "Infinite — top of the ladder"
+  const goal = (rk.rank >= MAX) ? "Infinite: top of the ladder"
     : nxt ? `${nxt.at - rk.rank} to <b>${esc(nxt.name)}</b>` : "";
 
   const grid = RANK_TIERS.slice(1, -1)
@@ -1442,7 +1442,7 @@ function ingestProfile(text, name){
     currentProfile = p;
     saveProfile();
     renderProfile();
-    setStatus(`Profile loaded \u2014 ${p.name || "player"}${p.wins != null ? `, ${p.wins}\u2013${p.losses}` : ""}`, "ok");
+    setStatus(`Profile loaded: ${p.name || "player"}${p.wins != null ? `, ${p.wins}\u2013${p.losses}` : ""}`, "ok");
   }catch(err){ setStatus("Couldn't read profile: " + err.message, "warn"); }
 }
 async function readProfileHandle(h){
@@ -1668,8 +1668,8 @@ $("btnCard").addEventListener("click", () => {
         return;
       }catch(e){}
     }
-    setStatus("Card ready — use Download (clipboard image blocked)", "warn");
-    if (msg){ msg.textContent = "clipboard blocked — use Download"; msg.className = "tb-status warn"; }
+    setStatus("Card ready. Use Download (clipboard image blocked)", "warn");
+    if (msg){ msg.textContent = "clipboard blocked, use Download"; msg.className = "tb-status warn"; }
   }, "image/png");
 });
 /* ---------- export menu ---------- */
@@ -1828,7 +1828,7 @@ function runMissing(){
   $("missingMeta").textContent = isCode ? "read as deck code" : `${resolved.length} matched`;
   let html = `<div class="miss-summary">`;
   if (!resolved.length) html += `Nothing recognized.`;
-  else if (!missing.length) html += `You own <b class="ok">all ${resolved.length}</b> — ready to build.`;
+  else if (!missing.length) html += `You own <b class="ok">all ${resolved.length}</b>. Ready to build.`;
   else html += `Missing <b>${missing.length}</b> of ${resolved.length} · own ${have}`;
   html += `</div>`;
   if (missing.length)
@@ -1898,7 +1898,7 @@ function renderBuilderDeck(){
       const inner = art
         ? `<img loading="lazy" src="${esc(art)}" alt="${esc(nm)}" onerror="imgFallback(this)"><div class="ph" style="display:none">${esc(nm)}</div>`
         : `<div class="ph">${esc(nm)}</div>`;
-      html += `<div class="slot filled${owns ? "" : " unowned"}" data-cid="${esc(id)}" title="${esc(nm)} — click to remove">${inner}<button class="card-info" data-cid="${esc(id)}" title="Card details">i</button></div>`;
+      html += `<div class="slot filled${owns ? "" : " unowned"}" data-cid="${esc(id)}" title="${esc(nm)} (click to remove)">${inner}<button class="card-info" data-cid="${esc(id)}" title="Card details">i</button></div>`;
     } else html += `<div class="slot"></div>`;
   }
   slots.innerHTML = html;
@@ -1988,7 +1988,7 @@ function builderMsg(text, warn){
 }
 $("bLoad").addEventListener("click", () => {
   const { ids, unknown } = resolveCards($("bImport").value || "");
-  if (!ids.length){ builderMsg("Couldn't read that — paste a deck code or card list", true); return; }
+  if (!ids.length){ builderMsg("Couldn't read that. Paste a deck code or card list", true); return; }
   builderDeck = ids.slice(0, 12); $("bImport").value = "";
   renderBuilderDeck(); renderBuilderPool();
   builderMsg(`Loaded ${builderDeck.length} card${builderDeck.length === 1 ? "" : "s"}`
