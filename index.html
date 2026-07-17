@@ -407,6 +407,9 @@
 
   footer{margin-top:64px; padding-top:20px; border-top:1px solid var(--line); font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); letter-spacing:.03em}
   .foot-row{display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px}
+  footer a{color:var(--cyan); text-decoration:none; border-bottom:1px solid rgba(34,224,255,.35)}
+  footer a:hover{border-bottom-color:var(--cyan)}
+  footer a:focus-visible{outline:2px solid var(--cyan); outline-offset:2px}
   .privacy{margin-bottom:18px}
   .privacy summary{cursor:pointer; color:var(--cyan); font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; list-style:none; user-select:none}
   .privacy summary::-webkit-details-marker{display:none}
@@ -658,14 +661,15 @@
         <p>Everything runs in your browser. This page reads up to two files that <em>you</em> pick from your own machine:</p>
         <ul>
           <li><b>CollectionState.json</b> &mdash; your cards, variants, splits, boosters, decks, and collection level.</li>
-          <li><b>ProfileState.json</b> (optional) &mdash; your handle, win/loss record, snap count, and per-card cube totals.</li>
+          <li><b>ProfileState.json</b> (optional) &mdash; your handle, win/loss record, snap count, ladder rank, wallet balances, and per-card cube totals.</li>
         </ul>
-        <p>From those files it keeps <b>only what you see on this page</b>. It never reads account IDs, email or login info, auth tokens, currencies, or the hidden per-card instance IDs &mdash; even though those sit in the same files.</p>
-        <p>Nothing is uploaded. There is <b>no server, no account, no analytics, no tracking</b>. Your data is saved only in this browser's local storage, and <b>Reset</b> erases it. The only outside requests are for public card images and the shared card list &mdash; neither carries any of your data.</p>
+        <p>From those files it keeps <b>only what you see on this page</b>. It never reads account IDs, email or login info, auth tokens, or the hidden per-card instance IDs &mdash; even though those sit in the same files.</p>
+        <p>Nothing is uploaded. There is <b>no server, no account, no analytics, no tracking</b>. Your data is saved only in this browser's local storage, and <b>Reset</b> erases it. The card list ships with this site. Card art loads from <a href="https://marvelsnapzone.com" target="_blank" rel="noopener">MarvelSnapZone</a>: those requests carry no collection data, but their server sees your IP and which art your browser asks for &mdash; and that reflects which cards you own.</p>
       </div>
     </details>
     <div class="foot-row">
       <span>snap-dossier &middot; runs entirely in your browser</span>
+      <span>card data &amp; art from <a href="https://marvelsnapzone.com" target="_blank" rel="noopener">MarvelSnapZone</a></span>
       <span id="footMeta">hosted on GitHub Pages</span>
     </div>
   </footer>
