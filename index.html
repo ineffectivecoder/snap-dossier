@@ -687,6 +687,7 @@ const SERIES_ORDER = ["Starter Card","Recruit Season","Series 1","Series 2","Ser
 let currentData = null;   // array of card records (with card_def_id)
 let currentDecks = [];    // array of deck objects
 let currentLevel = null;  // Collection Level (CollectionScore) from CollectionState
+let currentMeta = null;   // {created, rarity} for the share card's "wrapped" row
 let currentProfile = null;// {name, tag, wins, losses, ties, snaps, concedes, cardStats}
 let liveProfileHandle = null;
 let universe = [];        // slim card list from cards.json
@@ -706,7 +707,7 @@ function setStatus(msg, kind){ const s = $("status"); s.textContent = msg || "";
 
 /* ---------- persistence (guarded; degrades gracefully off a real origin) ---------- */
 function saveCollection(){
-  try{ localStorage.setItem(LS_KEY, JSON.stringify({t:Date.now(), records:currentData, decks:currentDecks, level:currentLevel})); }catch(e){}
+  try{ localStorage.setItem(LS_KEY, JSON.stringify({t:Date.now(), records:currentData, decks:currentDecks, level:currentLevel, meta:currentMeta})); }catch(e){}
 }
 function saveProfile(){
   try{ localStorage.setItem(LS_PROFILE, JSON.stringify({t:Date.now(), profile:currentProfile})); }catch(e){}
@@ -758,6 +759,20 @@ function parseCollection(json){
     card_def_id: r.card_def_id, name: r.name, variant_count: r.variants.size,
     boosters: r.boosters, lifetime_boosters: r.lifetime_boosters, splits: r.splits, acquired: r.acquired,
   })).sort((a,b) => a.name.localeCompare(b.name));
+}
+
+// Share-card extras: account age (Account.TimeCreated) and the collection's
+// rarity makeup (counted across every owned card item, variants included).
+// Kept separate from parseCollection so its record shape stays untouched.
+function parseColMeta(json){
+  const server = json.ServerState || {};
+  const tc = server.Account && server.Account.TimeCreated ? Date.parse(server.Account.TimeCreated) : NaN;
+  const rarity = {};
+  for (const e of (server.Cards || [])){
+    const r = e.RarityDefId; if (!r) continue;
+    rarity[r] = (rarity[r] || 0) + 1;
+  }
+  return { created: isNaN(tc) ? null : tc, rarity };
 }
 
 function parseDecks(json){
@@ -1390,6 +1405,7 @@ function ingest(text, name){
     currentData = recs;
     currentDecks = parseDecks(json);
     currentLevel = extractLevel(json);
+    currentMeta = parseColMeta(json);
     saveCollection();
     renderAll();
     setStatus(`Synced ${recs.length} cards from ${name} \u00b7 ${new Date().toLocaleTimeString()}`, "ok");
@@ -1537,6 +1553,7 @@ function shareStats(){
   }
   const decided = (p.wins != null) ? p.wins + p.losses : null;
   const netCubes = p.cardStats ? Object.values(p.cardStats).reduce((a, b) => a + b, 0) : null;
+  const m = currentMeta || {};
   return {
     name: p.name || "Marvel Snap Player", tag: p.tag,
     level: currentLevel, rank: p.rank || null, eightCube: !!p.eightCube,
@@ -1546,6 +1563,9 @@ function shareStats(){
     snaps: p.snaps, retreats: p.concedes, netCubes,
     gold: w.gold ? w.gold.total : null, tokens: w.tokens ? w.tokens.total : null,
     decks: (currentDecks || []).length,
+    created: (typeof m.created === "number") ? m.created : null,
+    lifeBoosters: sum("lifetime_boosters"),
+    rarity: (m.rarity && typeof m.rarity === "object") ? m.rarity : null,
   };
 }
 function roundRect(ctx, x, y, w, h, r){
@@ -1574,8 +1594,6 @@ function drawCardCanvas(s){
   const gB = ctx.createRadialGradient(60, 40, 0, 60, 40, 460);
   gB.addColorStop(0, "rgba(34,224,255,.14)"); gB.addColorStop(1, "rgba(34,224,255,0)");
   ctx.fillStyle = gB; ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = "rgba(123,92,255,.10)"; ctx.lineWidth = 1;
-  for (let gx = 0; gx <= W; gx += 40){ ctx.beginPath(); ctx.moveTo(gx, H - 90); ctx.lineTo(gx, H); ctx.stroke(); }
   roundRect(ctx, 6, 6, W - 12, H - 12, 20); ctx.strokeStyle = "rgba(123,92,255,.35)"; ctx.lineWidth = 2; ctx.stroke();
 
   spaced("◆ MARVEL SNAP DOSSIER", pad, 58, `600 13px ${MONO}`, "#22e0ff", 4);
@@ -1641,6 +1659,43 @@ function drawCardCanvas(s){
   if (s.retreats != null) rec.push(`${fmt(s.retreats)} retreats`);
   if (s.decks) rec.push(`${fmt(s.decks)} decks`);
   if (rec.length) spaced(rec.join("   ·   "), pad, recY, `500 15px ${MONO}`, "#9a92c9", .5);
+
+  // wrapped row: how long you've played + lifetime boosters earned
+  const wrap = [];
+  if (s.created != null){
+    const since = new Date(s.created).toLocaleDateString("en-US", { month: "short", year: "numeric" }).toUpperCase();
+    const yrs = (Date.now() - s.created) / (365.25 * 864e5);
+    const age = yrs >= 1 ? `${yrs.toFixed(1)} YRS` : `${Math.max(1, Math.round(yrs * 12))} MO`;
+    wrap.push(`PLAYING SINCE ${since} (${age})`);
+  }
+  if (s.lifeBoosters) wrap.push(`${fmt(s.lifeBoosters)} LIFETIME BOOSTERS`);
+  const wrapY = recY + 34;
+  if (wrap.length) spaced(wrap.join("   ·   "), pad, wrapY, `600 13px ${MONO}`, "#22e0ff", 1.5);
+
+  // rarity spread bar (fills the space the old grid floor occupied)
+  const RAR = [
+    ["Common", "Com", "#6a6499"], ["Uncommon", "Unc", "#4aa3c7"], ["Rare", "Rare", "#22e0ff"],
+    ["Epic", "Epic", "#7b5cff"], ["Legendary", "Leg", "#b06bff"], ["UltraLegendary", "UL", "#ff2d95"],
+    ["Infinity", "Inf", "#ffc23d"],
+  ];
+  if (s.rarity){
+    const present = RAR.map(([k, ab, c]) => [ab, c, s.rarity[k] || 0]).filter(r => r[2] > 0);
+    const tot = present.reduce((a, r) => a + r[2], 0);
+    if (tot > 0){
+      const barY = wrapY + 20, barH = 12, bw = W - pad * 2;
+      roundRect(ctx, pad, barY, bw, barH, 6); ctx.fillStyle = "#151234"; ctx.fill();
+      ctx.save(); roundRect(ctx, pad, barY, bw, barH, 6); ctx.clip();
+      let x = pad;
+      for (const [, c, n] of present){ const seg = n / tot * bw; ctx.fillStyle = c; ctx.fillRect(x, barY, Math.max(seg - 1, 1), barH); x += seg; }
+      ctx.restore();
+      const legY = barY + 30, step = bw / present.length;
+      present.forEach(([ab, c, n], i) => {
+        const lx = pad + i * step;
+        ctx.fillStyle = c; ctx.beginPath(); ctx.arc(lx + 4, legY - 4, 4, 0, Math.PI * 2); ctx.fill();
+        spaced(`${ab} ${fmt(n)}`, lx + 14, legY, `11px ${MONO}`, "#9a92c9", .5);
+      });
+    }
+  }
   spaced("snap-dossier", pad, H - 26, `11px ${MONO}`, "#6a6499", 2);
   spaced("read locally · never uploaded", W - pad, H - 26, `11px ${MONO}`, "#6a6499", .5, "right");
   return cv;
@@ -2043,6 +2098,7 @@ renderSavedDecks();
     currentData = saved.records;
     currentDecks = Array.isArray(saved.decks) ? saved.decks : [];
     currentLevel = (typeof saved.level === "number") ? saved.level : null;
+    currentMeta = (saved.meta && typeof saved.meta === "object") ? saved.meta : null;
     if (saved.t) $("footMeta").textContent = `synced ${new Date(saved.t).toLocaleDateString()} \u00b7 GitHub Pages`;
     $("eyebrow").textContent = "Collection Dossier \u00b7 LIVE";
   }
